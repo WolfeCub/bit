@@ -70,8 +70,12 @@ pub enum ObjectType {
     Tag,
 }
 
+#[derive(thiserror::Error, Debug)]
+#[error("Unknown object type: {0}")]
+pub struct UnknownObjectTypeError(String);
+
 impl FromStr for ObjectType {
-    type Err = ();
+    type Err = UnknownObjectTypeError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -79,7 +83,7 @@ impl FromStr for ObjectType {
             "tree" => Ok(ObjectType::Tree),
             "commit" => Ok(ObjectType::Commit),
             "tag" => Ok(ObjectType::Tag),
-            _ => Err(()),
+            t => Err(UnknownObjectTypeError(t.to_string())),
         }
     }
 }

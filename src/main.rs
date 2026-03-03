@@ -2,11 +2,14 @@ use clap::Parser;
 
 mod util;
 mod object;
+mod errors;
 
 mod commands;
 use commands::init::InitArg;
 use commands::cat_file::CatFileArg;
 use commands::hash_object::HashObjectArg;
+
+use crate::errors::BitError;
 
 
 #[derive(Parser, Debug)]
@@ -17,7 +20,7 @@ enum Args {
     HashObject(HashObjectArg),
 }
 
-fn main() {
+fn main() -> Result<(), BitError> {
     let args = Args::parse();
 
     match args {

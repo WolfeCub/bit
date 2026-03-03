@@ -1,6 +1,6 @@
 use clap::Args;
 
-use crate::object::Object;
+use crate::{errors::BitError, object::Object};
 
 #[derive(Args, Debug)]
 pub struct CatFileArg {
@@ -9,12 +9,11 @@ pub struct CatFileArg {
 }
 
 impl CatFileArg {
-    pub fn run(self) {
+    pub fn run(self) -> Result<(), BitError> {
         let object = Object::read_from_disk(self.type_, self.object);
 
-        println!(
-            "{}",
-            str::from_utf8(&object.content).expect("Invalid UTF-8 content")
-        );
+        println!("{}", str::from_utf8(&object.content)?);
+
+        Ok(())
     }
 }

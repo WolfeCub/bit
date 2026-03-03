@@ -5,13 +5,11 @@ use std::{
 };
 
 use clap::Args;
-use flate2::{
-    Compression,
-    write::ZlibEncoder,
-};
+use flate2::{Compression, write::ZlibEncoder};
 use sha1::{Digest, Sha1};
 
 use crate::{
+    errors::BitError,
     object::ObjectType,
     util::{object_path, repo_root},
 };
@@ -28,11 +26,10 @@ pub struct HashObjectArg {
 }
 
 impl HashObjectArg {
-    pub fn run(self) {
-        let target_content = fs::read(&self.path).expect(&format!("Unable to read {}", self.path));
+    pub fn run(self) -> Result<(), BitError> {
+        let target_content = fs::read(&self.path)?;
 
-        let object_type = ObjectType::from_str(&self.type_)
-            .expect(&format!("Unknown object type: {}", self.type_));
+        let object_type = ObjectType::from_str(&self.type_)?;
 
         let object = crate::object::Object::new(object_type, target_content);
 
@@ -43,23 +40,19 @@ impl HashObjectArg {
         let hash = format!("{:x}", hashed);
 
         if self.write {
-            let root = repo_root().expect("Not in bit repository");
-            let path = object_path(root, &hash);
+            let path = object_path(repo_root()?, &hash);
 
             if !path.exists() {
-                fs::create_dir_all(path.parent().expect("Could not get parent directory"))
-                    .expect("Unable to create object directory");
+                fs::create_dir_all(path.parent().expect("Could not get parent directory"))?;
 
-                let Ok(file) = OpenOptions::new().write(true).create_new(true).open(path) else {
-                    panic!("Unable to create object file");
-                };
+                let file = OpenOptions::new().write(true).create_new(true).open(path)?;
 
-                ZlibEncoder::new(file, Compression::default())
-                    .write_all(&object_output)
-                    .expect("Unable to write compressed object");
+                ZlibEncoder::new(file, Compression::default()).write_all(&object_output)?;
             }
         }
 
         println!("{}", hash);
+
+        Ok(())
     }
 }
