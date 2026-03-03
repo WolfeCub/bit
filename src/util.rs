@@ -14,3 +14,7 @@ pub fn repo_root() -> Option<PathBuf> {
         }
     }
 }
+
+pub fn object_path(root: PathBuf, hash: &str) -> PathBuf {
+    root.join(".bit/objects").join(&hash[..2]).join(&hash[2..])
+}
