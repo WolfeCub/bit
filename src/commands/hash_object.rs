@@ -1,7 +1,6 @@
 use std::{
     fs::{self, OpenOptions},
     io::Write,
-    str::FromStr,
 };
 
 use clap::Args;
@@ -16,8 +15,8 @@ use crate::{
 
 #[derive(Args, Debug)]
 pub struct HashObjectArg {
-    #[arg(short, long)]
-    pub type_: String,
+    #[arg(short, long, default_value_t = ObjectType::Blob)]
+    pub type_: ObjectType,
 
     #[arg(short, long, default_value_t = false)]
     pub write: bool,
@@ -29,11 +28,9 @@ impl HashObjectArg {
     pub fn run(self) -> Result<(), BitError> {
         let target_content = fs::read(&self.path)?;
 
-        let object_type = ObjectType::from_str(&self.type_)?;
+        let object = crate::object::Object::new(self.type_, target_content);
 
-        let object = crate::object::Object::new(object_type, target_content);
-
-        let object_output = object.output();
+        let object_output = object.serialize();
         let mut hasher = Sha1::new();
         hasher.update(&object_output);
         let hashed = hasher.finalize();

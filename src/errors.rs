@@ -1,4 +1,4 @@
-use std::{io, str::Utf8Error};
+use std::{io, str::Utf8Error, string::FromUtf8Error};
 
 use thiserror::Error;
 
@@ -6,6 +6,9 @@ use thiserror::Error;
 pub enum BitError {
     #[error("Invalid UTF-8 content")]
     InvalidUtf8(#[from] Utf8Error),
+
+    #[error("Invalid UTF-8 content")]
+    InvalidFromUtf8(#[from] FromUtf8Error),
 
     #[error("IO Error: {0}")]
     IOError(#[from] io::Error),
@@ -15,4 +18,7 @@ pub enum BitError {
 
     #[error("Not a bit repository")]
     NotInRepo,
+
+    #[error("Invalid commit: {0}")]
+    InvalidCommit(String),
 }

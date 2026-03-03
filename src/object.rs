@@ -23,7 +23,7 @@ impl Object {
         }
     }
 
-    pub fn output(&self) -> Vec<u8> {
+    pub fn serialize(&self) -> Vec<u8> {
         [
             self.type_.to_string().as_bytes(),
             b" ",
@@ -34,7 +34,8 @@ impl Object {
         .concat()
     }
 
-    pub fn read_from_disk(type_: String, hash: String) -> Self {
+    // TODO: Error handling
+    pub fn read_from_disk(type_: ObjectType, hash: &str) -> Self {
         let path = repo_root()
             .expect("Not in bit repository")
             .join(".bit/objects")
@@ -50,19 +51,19 @@ impl Object {
             .expect("Unable to read compressed contents");
 
         // TODO: Size not needed?
-        let Some((rest, size)) = read_header(&type_, contents.as_slice()) else {
+        let Some((rest, size)) = read_header(&type_.to_string(), contents.as_slice()) else {
             panic!("fatal: bit cat-file {}: bad file", hash);
         };
 
         Object {
-            type_: ObjectType::from_str(&type_).expect(&format!("Unknown object type: {}", type_)),
+            type_,
             length: size,
             content: rest.to_vec(),
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ObjectType {
     Blob,
     Tree,

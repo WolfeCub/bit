@@ -1,0 +1,95 @@
+use chrono::{DateTime, FixedOffset};
+
+use crate::errors::BitError;
+
+#[derive(Debug)]
+pub struct Commit {
+    pub hash: String,
+    pub tree: String,
+    pub parent: Option<String>,
+    pub author: String,
+    pub committer: String,
+    pub gpgsig: Option<String>,
+    pub message: String,
+}
+
+impl Commit {
+    pub fn parse(hash: String, body: &[u8]) -> Result<Self, BitError> {
+        let (Some(tree), rest) = parse_line(b"tree ", body) else {
+            return Err(BitError::InvalidCommit("Missing tree".to_string()));
+        };
+
+        let (parent, rest) = parse_line(b"parent ", rest);
+
+        let (Some(author), rest) = parse_line(b"author ", rest) else {
+            return Err(BitError::InvalidCommit("Missing author".to_string()));
+        };
+
+        let (Some(committer), rest) = parse_line(b"committer ", rest) else {
+            return Err(BitError::InvalidCommit("Missing committer".to_string()));
+        };
+
+        let (gpgsig, rest) = parse_line(b"gpgsig ", rest);
+
+        let Some(rest) = rest.strip_prefix(b"\n") else {
+            return Err(BitError::InvalidCommit(
+                "Require empty line before body".to_string(),
+            ));
+        };
+
+        Ok(Self {
+            hash,
+            tree,
+            parent,
+            author,
+            committer,
+            gpgsig,
+            message: String::from_utf8(rest.to_vec())?,
+        })
+    }
+
+    pub fn serialize(&self) -> Vec<u8> {
+        format!(
+            "tree {}\n{}author {}\ncommitter {}\n{}{}",
+            self.tree,
+            self.parent
+                .as_ref()
+                .map_or("".to_string(), |p| format!("parent {}\n", p)),
+            self.author,
+            self.committer,
+            self.gpgsig
+                .as_ref()
+                .map_or("".to_string(), |s| format!("gpgsig {}\n", s)),
+            self.message
+        )
+        .into_bytes()
+    }
+
+    pub fn parse_author_date(&self) -> (String, DateTime<FixedOffset>) {
+        let split_idx = self
+            .author
+            .rmatch_indices(' ')
+            .nth(1)
+            .map(|(i, _)| i)
+            .expect("Invalid author format");
+
+        (
+            self.author[..split_idx].to_string(),
+            DateTime::parse_from_str(&self.author[split_idx..], "%s %z").unwrap(),
+        )
+    }
+}
+
+fn parse_line<'a>(prefix: &[u8], body: &'a [u8]) -> (Option<String>, &'a [u8]) {
+    let Some(rest) = body.strip_prefix(prefix) else {
+        return (None, body);
+    };
+
+    let Some(eol) = rest.iter().position(|c| *c == b'\n') else {
+        return (None, body);
+    };
+
+    let p = String::from_utf8(rest[..eol].to_vec()).ok();
+
+    (p, &rest[eol + 1..])
+}
