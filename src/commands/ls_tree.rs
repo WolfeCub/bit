@@ -9,10 +9,9 @@ pub struct LsTreeArg {
 
 impl LsTreeArg {
     pub fn run(self) -> Result<(), BitError> {
-        let object = Object::read_from_disk(ObjectType::Tree, &self.hash);
-        let tree = Tree::parse(&object.content)?;
+        let tree = Object::<Tree>::read_from_disk(&self.hash, ObjectType::Tree)?;
 
-        for entry in tree.entries {
+        for entry in tree.inner.entries {
             println!("{:0>6} {} {}\t{}", entry.mode, entry.get_type()?, entry.hash, entry.path);
         }
 

@@ -91,10 +91,13 @@ fn write_tree(dir: &str) -> Result<String, BitError> {
         });
     }
 
-    let tree = Tree {
-        entries: tree_entries,
-    };
-    let hash = hash_object(tree.serialize(), ObjectType::Tree, true)?;
+    let hash = hash_object(
+        ObjectType::Tree,
+        Tree {
+            entries: tree_entries,
+        },
+        true,
+    )?;
 
     Ok(hash)
 }

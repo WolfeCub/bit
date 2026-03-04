@@ -8,34 +8,35 @@ use flate2::read::ZlibDecoder;
 
 use crate::{errors::BitError, util::repo_root};
 
-pub struct Object {
-    pub type_: ObjectType,
-    pub length: usize,
-    pub content: Vec<u8>,
+pub trait GitObject: Sized {
+    fn serialize_body(&self) -> Vec<u8>;
+    // TODO: Remove hash from parse_body it's just there for Commit
+    fn parse_body(hash: String, body: &[u8]) -> Result<Self, BitError>;
 }
 
-impl Object {
-    pub fn new(type_: ObjectType, content: Vec<u8>) -> Self {
-        Object {
-            type_,
-            length: content.len(),
-            content,
-        }
+pub struct Object<T: GitObject> {
+    pub inner: T,
+    pub type_: ObjectType,
+}
+
+impl<T: GitObject> Object<T> {
+    pub fn new(type_: ObjectType, inner: T) -> Self {
+        Object { type_, inner }
     }
 
     pub fn serialize(&self) -> Vec<u8> {
+        let body = self.inner.serialize_body();
         [
             self.type_.to_string().as_bytes(),
             b" ",
-            self.length.to_string().as_bytes(),
+            body.len().to_string().as_bytes(),
             b"\0",
-            &self.content,
+            &body,
         ]
         .concat()
     }
 
-    // TODO: Error handling
-    pub fn read_from_disk(type_: ObjectType, hash: &str) -> Result<Self, BitError> {
+    pub fn read_from_disk(hash: &str, type_: ObjectType) -> Result<Self, BitError> {
         let path = repo_root()?
             .join(".bit/objects")
             .join(&hash[..2])
@@ -48,14 +49,13 @@ impl Object {
         d.read_to_end(&mut contents)?;
 
         // TODO: Size not needed?
-        let Some((rest, size)) = read_header(&type_.to_string(), contents.as_slice()) else {
+        let Some((rest, _size)) = read_header(&type_.to_string(), contents.as_slice()) else {
             panic!("fatal: bit cat-file {}: bad file", hash);
         };
 
         Ok(Object {
+            inner: T::parse_body(hash.to_string(), rest)?,
             type_,
-            length: size,
-            content: rest.to_vec(),
         })
     }
 }
@@ -120,4 +120,16 @@ fn parse_number_from_bytes(bytes: &[u8]) -> Option<usize> {
         }
     }
     Some(n)
+}
+
+
+// Nice little convienence wrapper for a generic body of bytes.
+impl GitObject for Vec<u8> {
+    fn serialize_body(&self) -> Vec<u8> {
+        self.clone()
+    }
+
+    fn parse_body(_hash: String, body: &[u8]) -> Result<Self, BitError> {
+        Ok(body.to_vec())
+    }
 }

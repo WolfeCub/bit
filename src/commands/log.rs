@@ -22,7 +22,7 @@ impl LogArg {
             println!("Author: {}", author);
             println!("Date:   {}", date.format("%a %h %d %H:%M:%S %Y %z"));
             println!();
-            println!("{}", commit.message);
+            println!("    {}", commit.message);
         }
 
         Ok(())
@@ -46,9 +46,10 @@ impl Iterator for CommitIter {
 
     fn next(&mut self) -> Option<Self::Item> {
         let hash = self.next_commit.as_ref()?;
-        let object = Object::read_from_disk(ObjectType::Commit, hash);
-        let commit = Commit::parse(hash.clone(), &object.content);
+        let object = Object::<Commit>::read_from_disk(hash, ObjectType::Commit);
+        let commit = object.map(|o| o.inner);
 
+        // TODO: I don't understand this
         let Ok(commit) = commit else {
             self.next_commit = None;
             return Some(commit);

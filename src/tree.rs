@@ -1,14 +1,21 @@
 use itertools::Itertools;
 
-use crate::errors::BitError;
+use crate::{errors::BitError, object::GitObject};
 
 #[derive(Debug)]
 pub struct Tree {
     pub entries: Vec<TreeEntry>,
 }
 
-impl Tree {
-    pub fn parse(body: &[u8]) -> Result<Self, BitError> {
+impl GitObject for Tree {
+    fn serialize_body(&self) -> Vec<u8> {
+        self.entries
+            .iter()
+            .flat_map(|e| e.serialize())
+            .collect::<Vec<u8>>()
+    }
+
+    fn parse_body(_hash: String, body: &[u8]) -> Result<Self, BitError> {
         let mut entries = Vec::new();
         let mut iter = body;
         loop {
@@ -23,14 +30,6 @@ impl Tree {
         }
 
         Ok(Tree { entries })
-    }
-
-    // TODO: Expects entries to already be sorted. Maybe that's dumb
-    pub fn serialize(&self) -> Vec<u8> {
-        self.entries
-            .iter()
-            .flat_map(|e| e.serialize())
-            .collect::<Vec<u8>>()
     }
 }
 

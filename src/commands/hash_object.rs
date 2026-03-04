@@ -9,7 +9,7 @@ use sha1::{Digest, Sha1};
 
 use crate::{
     errors::BitError,
-    object::ObjectType,
+    object::{GitObject, Object, ObjectType},
     util::{object_path, repo_root},
 };
 
@@ -34,8 +34,8 @@ impl HashObjectArg {
     }
 }
 
-pub fn hash_object(content: Vec<u8>, type_: ObjectType, write: bool) -> Result<String, BitError> {
-    let object = crate::object::Object::new(type_, content);
+pub fn hash_object<T: GitObject>(type_: ObjectType, inner: T, write: bool) -> Result<String, BitError> {
+    let object = Object::<T>::new(type_, inner);
 
     let object_output = object.serialize();
     let mut hasher = Sha1::new();
@@ -60,5 +60,5 @@ pub fn hash_object(content: Vec<u8>, type_: ObjectType, write: bool) -> Result<S
 
 pub fn hash_object_from_disk(path: &str, type_: ObjectType, write: bool) -> Result<String, BitError> {
     let content = fs::read(path)?;
-    hash_object(content, type_, write)
+    hash_object(type_, content, write)
 }

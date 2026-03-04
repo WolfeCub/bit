@@ -1,6 +1,9 @@
 use chrono::{DateTime, FixedOffset};
 
-use crate::errors::BitError;
+use crate::{
+    errors::BitError,
+    object::{GitObject, ObjectType},
+};
 
 #[derive(Debug)]
 pub struct Commit {
@@ -13,8 +16,25 @@ pub struct Commit {
     pub message: String,
 }
 
-impl Commit {
-    pub fn parse(hash: String, body: &[u8]) -> Result<Self, BitError> {
+impl GitObject for Commit {
+    fn serialize_body(&self) -> Vec<u8> {
+        format!(
+            "tree {}\n{}author {}\ncommitter {}\n{}{}",
+            self.tree,
+            self.parent
+                .as_ref()
+                .map_or("".to_string(), |p| format!("parent {}\n", p)),
+            self.author,
+            self.committer,
+            self.gpgsig
+                .as_ref()
+                .map_or("".to_string(), |s| format!("gpgsig {}\n", s)),
+            self.message
+        )
+        .into_bytes()
+    }
+
+    fn parse_body(hash: String, body: &[u8]) -> Result<Self, BitError> {
         let (Some(tree), rest) = parse_line(b"tree ", body) else {
             return Err(BitError::InvalidCommit("Missing tree".into()));
         };
@@ -47,24 +67,9 @@ impl Commit {
             message: String::from_utf8(rest.to_vec())?,
         })
     }
+}
 
-    pub fn serialize(&self) -> Vec<u8> {
-        format!(
-            "tree {}\n{}author {}\ncommitter {}\n{}{}",
-            self.tree,
-            self.parent
-                .as_ref()
-                .map_or("".to_string(), |p| format!("parent {}\n", p)),
-            self.author,
-            self.committer,
-            self.gpgsig
-                .as_ref()
-                .map_or("".to_string(), |s| format!("gpgsig {}\n", s)),
-            self.message
-        )
-        .into_bytes()
-    }
-
+impl Commit {
     pub fn parse_author_date(&self) -> (String, DateTime<FixedOffset>) {
         let split_idx = self
             .author

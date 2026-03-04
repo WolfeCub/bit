@@ -1,6 +1,9 @@
 use clap::Args;
 
-use crate::{errors::BitError, object::{Object, ObjectType}};
+use crate::{
+    errors::BitError,
+    object::{Object, ObjectType},
+};
 
 #[derive(Args, Debug)]
 pub struct CatFileArg {
@@ -10,9 +13,9 @@ pub struct CatFileArg {
 
 impl CatFileArg {
     pub fn run(self) -> Result<(), BitError> {
-        let object = Object::read_from_disk(self.type_, &self.object);
+        let object = Object::<Vec<u8>>::read_from_disk(&self.object, self.type_)?;
 
-        println!("{}", str::from_utf8(&object.content)?);
+        println!("{}", unsafe { str::from_utf8_unchecked(&object.inner) });
 
         Ok(())
     }

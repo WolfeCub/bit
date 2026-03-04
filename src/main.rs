@@ -14,7 +14,6 @@ use commands::hash_object::HashObjectArg;
 use crate::commands::log::LogArg;
 use crate::commands::ls_tree::LsTreeArg;
 use crate::commands::write_tree::WriteTreeArg;
-use crate::errors::BitError;
 
 
 #[derive(Parser, Debug)]
