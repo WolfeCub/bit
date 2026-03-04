@@ -4,7 +4,6 @@ use crate::{
     commit::Commit,
     errors::BitError,
     object::{Object, ObjectType},
-    util::{object_path, repo_root},
 };
 
 #[derive(Args, Debug)]

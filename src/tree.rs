@@ -1,5 +1,3 @@
-use std::io::BufRead;
-
 use itertools::Itertools;
 
 use crate::errors::BitError;
@@ -26,6 +24,14 @@ impl Tree {
 
         Ok(Tree { entries })
     }
+
+    // TODO: Expects entries to already be sorted. Maybe that's dumb
+    pub fn serialize(&self) -> Vec<u8> {
+        self.entries
+            .iter()
+            .flat_map(|e| e.serialize())
+            .collect::<Vec<u8>>()
+    }
 }
 
 #[derive(Debug)]
@@ -37,15 +43,16 @@ pub struct TreeEntry {
 
 impl TreeEntry {
     pub fn parse(line: &[u8]) -> Result<(Self, &[u8]), BitError> {
-        let (mode, rest) = line.splitn(2, |c| *c == b' ').next_tuple().ok_or_else(|| {
-            BitError::InvalidTree("Invalid tree entry. No space found.".to_string())
-        })?;
+        let (mode, rest) = line
+            .splitn(2, |c| *c == b' ')
+            .next_tuple()
+            .ok_or_else(|| BitError::InvalidTree("Invalid tree entry. No space found.".into()))?;
 
         let (path, rest) = rest
             .splitn(2, |c| *c == b'\0')
             .next_tuple()
             .ok_or_else(|| {
-                BitError::InvalidTree("Invalid tree entry. No null byte found.".to_string())
+                BitError::InvalidTree("Invalid tree entry. No null byte found.".into())
             })?;
 
         let hash = hex::encode(&rest[..20]);
@@ -58,6 +65,18 @@ impl TreeEntry {
             },
             &rest[20..],
         ))
+    }
+
+    pub fn serialize(&self) -> Vec<u8> {
+        let mut out = Vec::with_capacity(self.mode.len() + 1 + self.path.len() + 1 + 20);
+
+        out.extend_from_slice(self.mode.as_bytes());
+        out.push(b' ');
+        out.extend_from_slice(self.path.as_bytes());
+        out.push(0);
+        out.extend_from_slice(&hex::decode(&self.hash).expect("Incorrectly constructed hash"));
+
+        out
     }
 
     pub fn get_type(&self) -> Result<&'static str, BitError> {

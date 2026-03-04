@@ -16,24 +16,24 @@ pub struct Commit {
 impl Commit {
     pub fn parse(hash: String, body: &[u8]) -> Result<Self, BitError> {
         let (Some(tree), rest) = parse_line(b"tree ", body) else {
-            return Err(BitError::InvalidCommit("Missing tree".to_string()));
+            return Err(BitError::InvalidCommit("Missing tree".into()));
         };
 
         let (parent, rest) = parse_line(b"parent ", rest);
 
         let (Some(author), rest) = parse_line(b"author ", rest) else {
-            return Err(BitError::InvalidCommit("Missing author".to_string()));
+            return Err(BitError::InvalidCommit("Missing author".into()));
         };
 
         let (Some(committer), rest) = parse_line(b"committer ", rest) else {
-            return Err(BitError::InvalidCommit("Missing committer".to_string()));
+            return Err(BitError::InvalidCommit("Missing committer".into()));
         };
 
         let (gpgsig, rest) = parse_line(b"gpgsig ", rest);
 
         let Some(rest) = rest.strip_prefix(b"\n") else {
             return Err(BitError::InvalidCommit(
-                "Require empty line before body".to_string(),
+                "Require empty line before body".into(),
             ));
         };
 

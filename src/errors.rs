@@ -1,4 +1,4 @@
-use std::{io, str::Utf8Error, string::FromUtf8Error};
+use std::{borrow::Cow, io, str::Utf8Error, string::FromUtf8Error};
 
 use thiserror::Error;
 
@@ -20,10 +20,10 @@ pub enum BitError {
     NotInRepo,
 
     #[error("Invalid commit: {0}")]
-    InvalidCommit(String),
+    InvalidCommit(Cow<'static, str>),
 
     #[error("Invalid tree: {0}")]
-    InvalidTree(String),
+    InvalidTree(Cow<'static, str>),
 
     #[error("Invalid tree entry mode: {0}")]
     InvalidTreeEntryMode(String),

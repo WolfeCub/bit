@@ -6,7 +6,7 @@ use std::{
 
 use flate2::read::ZlibDecoder;
 
-use crate::util::repo_root;
+use crate::{errors::BitError, util::repo_root};
 
 pub struct Object {
     pub type_: ObjectType,
@@ -35,31 +35,28 @@ impl Object {
     }
 
     // TODO: Error handling
-    pub fn read_from_disk(type_: ObjectType, hash: &str) -> Self {
-        let path = repo_root()
-            .expect("Not in bit repository")
+    pub fn read_from_disk(type_: ObjectType, hash: &str) -> Result<Self, BitError> {
+        let path = repo_root()?
             .join(".bit/objects")
             .join(&hash[..2])
             .join(&hash[2..]);
 
         // TODO: buffer this reading and decompressing
-        let compressed_contents =
-            fs::read(&path).expect(&format!("Unable to read {}", path.display()));
+        let compressed_contents = fs::read(&path)?;
         let mut d = ZlibDecoder::new(io::Cursor::new(compressed_contents));
         let mut contents = vec![];
-        d.read_to_end(&mut contents)
-            .expect("Unable to read compressed contents");
+        d.read_to_end(&mut contents)?;
 
         // TODO: Size not needed?
         let Some((rest, size)) = read_header(&type_.to_string(), contents.as_slice()) else {
             panic!("fatal: bit cat-file {}: bad file", hash);
         };
 
-        Object {
+        Ok(Object {
             type_,
             length: size,
             content: rest.to_vec(),
-        }
+        })
     }
 }
 
@@ -101,7 +98,6 @@ impl ToString for ObjectType {
     }
 }
 
-// TODO: Elegant error handling
 fn read_header<'a>(type_: &str, contents: &'a [u8]) -> Option<(&'a [u8], usize)> {
     let rest = contents
         .strip_prefix(type_.as_bytes())?

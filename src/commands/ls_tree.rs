@@ -1,5 +1,3 @@
-use std::{fs, path};
-
 use clap::Args;
 
 use crate::{errors::BitError, object::{Object, ObjectType}, tree::Tree};
