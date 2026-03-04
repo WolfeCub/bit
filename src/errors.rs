@@ -21,4 +21,10 @@ pub enum BitError {
 
     #[error("Invalid commit: {0}")]
     InvalidCommit(String),
+
+    #[error("Invalid tree: {0}")]
+    InvalidTree(String),
+
+    #[error("Invalid tree entry mode: {0}")]
+    InvalidTreeEntryMode(String),
 }

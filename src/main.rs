@@ -4,6 +4,7 @@ mod util;
 mod object;
 mod errors;
 mod commit;
+mod tree;
 
 mod commands;
 use commands::init::InitArg;
@@ -11,6 +12,7 @@ use commands::cat_file::CatFileArg;
 use commands::hash_object::HashObjectArg;
 
 use crate::commands::log::LogArg;
+use crate::commands::ls_tree::LsTreeArg;
 use crate::errors::BitError;
 
 
@@ -21,6 +23,7 @@ enum Args {
     CatFile(CatFileArg),
     HashObject(HashObjectArg),
     Log(LogArg),
+    LsTree(LsTreeArg),
 }
 
 fn main() -> Result<(), BitError> {
@@ -31,5 +34,6 @@ fn main() -> Result<(), BitError> {
         Args::CatFile(a) => a.run(),
         Args::HashObject(a) => a.run(),
         Args::Log(a) => a.run(),
+        Args::LsTree(a) => a.run(),
     }
 }
