@@ -6,7 +6,10 @@ use std::{
 
 use flate2::read::ZlibDecoder;
 
-use crate::{errors::BitError, util::repo_root};
+use crate::{
+    errors::BitError,
+    util::{object_path, repo_root},
+};
 
 pub trait GitObject: Sized {
     fn serialize_body(&self) -> Vec<u8>;
@@ -37,10 +40,7 @@ impl<T: GitObject> Object<T> {
     }
 
     pub fn read_from_disk(hash: &str, type_: ObjectType) -> Result<Self, BitError> {
-        let path = repo_root()?
-            .join(".bit/objects")
-            .join(&hash[..2])
-            .join(&hash[2..]);
+        let path = object_path(repo_root()?, hash);
 
         // TODO: buffer this reading and decompressing
         let compressed_contents = fs::read(&path)?;
@@ -121,7 +121,6 @@ fn parse_number_from_bytes(bytes: &[u8]) -> Option<usize> {
     }
     Some(n)
 }
-
 
 // Nice little convienence wrapper for a generic body of bytes.
 impl GitObject for Vec<u8> {

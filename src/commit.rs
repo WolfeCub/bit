@@ -2,7 +2,7 @@ use chrono::{DateTime, FixedOffset};
 
 use crate::{
     errors::BitError,
-    object::{GitObject, ObjectType},
+    object::GitObject,
 };
 
 #[derive(Debug)]

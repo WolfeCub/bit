@@ -1,20 +1,20 @@
 use clap::Parser;
 
-mod util;
-mod object;
-mod errors;
 mod commit;
+mod errors;
+mod object;
 mod tree;
+mod util;
 
 mod commands;
-use commands::init::InitArg;
 use commands::cat_file::CatFileArg;
 use commands::hash_object::HashObjectArg;
+use commands::init::InitArg;
 
 use crate::commands::log::LogArg;
 use crate::commands::ls_tree::LsTreeArg;
+use crate::commands::show_ref::ShowRefArg;
 use crate::commands::write_tree::WriteTreeArg;
-
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -25,6 +25,7 @@ enum Args {
     Log(LogArg),
     LsTree(LsTreeArg),
     WriteTree(WriteTreeArg),
+    ShowRef(ShowRefArg),
 }
 
 fn main() {
@@ -37,6 +38,7 @@ fn main() {
         Args::Log(a) => a.run(),
         Args::LsTree(a) => a.run(),
         Args::WriteTree(a) => a.run(),
+        Args::ShowRef(a) => a.run(),
     };
 
     if let Err(e) = result {
