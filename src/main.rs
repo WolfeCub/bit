@@ -5,6 +5,7 @@ mod errors;
 mod object;
 mod tree;
 mod util;
+mod tag;
 
 mod commands;
 use commands::cat_file::CatFileArg;
@@ -14,6 +15,7 @@ use commands::init::InitArg;
 use crate::commands::log::LogArg;
 use crate::commands::ls_tree::LsTreeArg;
 use crate::commands::show_ref::ShowRefArg;
+use crate::commands::tag::TagArg;
 use crate::commands::write_tree::WriteTreeArg;
 
 #[derive(Parser, Debug)]
@@ -26,6 +28,7 @@ enum Args {
     LsTree(LsTreeArg),
     WriteTree(WriteTreeArg),
     ShowRef(ShowRefArg),
+    Tag(TagArg),
 }
 
 fn main() {
@@ -39,6 +42,7 @@ fn main() {
         Args::LsTree(a) => a.run(),
         Args::WriteTree(a) => a.run(),
         Args::ShowRef(a) => a.run(),
+        Args::Tag(a) => a.run(),
     };
 
     if let Err(e) = result {

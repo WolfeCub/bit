@@ -1,22 +1,29 @@
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use clap::Args;
 
-use crate::errors::BitError;
+use crate::{errors::BitError, util::repo_root};
 
 #[derive(Args, Debug)]
 pub struct ShowRefArg {}
 
 impl ShowRefArg {
     pub fn run(self) -> Result<(), BitError> {
-        let mut refs = list_ref_paths(".bit/refs")?;
+        let root = repo_root()?;
+        let mut refs = list_ref_paths(root.join(".bit/refs"))?;
         refs.sort();
 
+        let prefix = root.join(".bit").canonicalize()?;
+        let prefix = format!("{}/", prefix.to_str().expect("Non UTF8 path"));
+
         for r in refs.iter() {
-            let hash = resolve_ref_path(r)?;
+            let hash = resolve_ref_path(r, &root)?;
             let path = r
-                .strip_prefix(".bit/")
-                .expect("Somehow ref doesn't start with .bit/");
+                .strip_prefix(&prefix)
+                .expect("Somehow ref doesn't start with $ROOT/.bit/");
             println!("{} {}", hash, path);
         }
         Ok(())
@@ -24,13 +31,17 @@ impl ShowRefArg {
 }
 
 pub fn resolve_ref(reference: &str) -> Result<String, BitError> {
-    resolve_ref_path(&format!(".bit/{}", reference))
+    let root = repo_root()?;
+    let path = root.join(".bit").join(reference);
+
+    resolve_ref_path(path, &root)
 }
 
-fn resolve_ref_path(path: impl AsRef<Path>) -> Result<String, BitError> {
+fn resolve_ref_path(path: impl AsRef<Path>, root: &PathBuf) -> Result<String, BitError> {
     let content = fs::read_to_string(path)?;
     if let Some(stripped) = content.strip_prefix("ref: ") {
-        return resolve_ref_path(format!(".bit/{}", stripped.trim()));
+        let p = root.join(".bit").join(stripped.trim());
+        return resolve_ref_path(p, root);
     }
     Ok(content.trim().to_string())
 }

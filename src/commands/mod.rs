@@ -5,3 +5,4 @@ pub mod log;
 pub mod ls_tree;
 pub mod write_tree;
 pub mod show_ref;
+pub mod tag;

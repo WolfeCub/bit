@@ -1,9 +1,6 @@
 use chrono::{DateTime, FixedOffset};
 
-use crate::{
-    errors::BitError,
-    object::GitObject,
-};
+use crate::{errors::BitError, object::GitObject, util::parse_line};
 
 #[derive(Debug)]
 pub struct Commit {
@@ -83,18 +80,4 @@ impl Commit {
             DateTime::parse_from_str(&self.author[split_idx..], "%s %z").unwrap(),
         )
     }
-}
-
-fn parse_line<'a>(prefix: &[u8], body: &'a [u8]) -> (Option<String>, &'a [u8]) {
-    let Some(rest) = body.strip_prefix(prefix) else {
-        return (None, body);
-    };
-
-    let Some(eol) = rest.iter().position(|c| *c == b'\n') else {
-        return (None, body);
-    };
-
-    let p = String::from_utf8(rest[..eol].to_vec()).ok();
-
-    (p, &rest[eol + 1..])
 }

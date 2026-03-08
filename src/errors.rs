@@ -27,4 +27,10 @@ pub enum BitError {
 
     #[error("Invalid tree entry mode: {0}")]
     InvalidTreeEntryMode(String),
+
+    #[error("Invalid tag: {0}")]
+    InvalidTag(Cow<'static, str>),
+
+    #[error("Empty {0} message")]
+    EmptyMessage(Cow<'static, str>),
 }
