@@ -4,7 +4,6 @@ use crate::{errors::BitError, object::GitObject, util::parse_line};
 
 #[derive(Debug)]
 pub struct Commit {
-    pub hash: String,
     pub tree: String,
     pub parent: Option<String>,
     pub author: String,
@@ -31,7 +30,7 @@ impl GitObject for Commit {
         .into_bytes()
     }
 
-    fn parse_body(hash: String, body: &[u8]) -> Result<Self, BitError> {
+    fn parse_body(body: &[u8]) -> Result<Self, BitError> {
         let (Some(tree), rest) = parse_line(b"tree ", body) else {
             return Err(BitError::InvalidCommit("Missing tree".into()));
         };
@@ -55,7 +54,6 @@ impl GitObject for Commit {
         };
 
         Ok(Self {
-            hash,
             tree,
             parent,
             author,

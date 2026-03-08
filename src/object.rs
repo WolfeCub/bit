@@ -13,8 +13,7 @@ use crate::{
 
 pub trait GitObject: Sized {
     fn serialize_body(&self) -> Vec<u8>;
-    // TODO: Remove hash from parse_body it's just there for Commit
-    fn parse_body(hash: String, body: &[u8]) -> Result<Self, BitError>;
+    fn parse_body(body: &[u8]) -> Result<Self, BitError>;
 }
 
 pub struct Object<T: GitObject> {
@@ -54,7 +53,7 @@ impl<T: GitObject> Object<T> {
         };
 
         Ok(Object {
-            inner: T::parse_body(hash.to_string(), rest)?,
+            inner: T::parse_body(rest)?,
             type_,
         })
     }
@@ -128,7 +127,7 @@ impl GitObject for Vec<u8> {
         self.clone()
     }
 
-    fn parse_body(_hash: String, body: &[u8]) -> Result<Self, BitError> {
+    fn parse_body(body: &[u8]) -> Result<Self, BitError> {
         Ok(body.to_vec())
     }
 }

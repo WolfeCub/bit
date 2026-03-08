@@ -15,7 +15,7 @@ impl GitObject for Tree {
             .collect::<Vec<u8>>()
     }
 
-    fn parse_body(_hash: String, body: &[u8]) -> Result<Self, BitError> {
+    fn parse_body(body: &[u8]) -> Result<Self, BitError> {
         let mut entries = Vec::new();
         let mut iter = body;
         loop {

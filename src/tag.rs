@@ -26,7 +26,7 @@ impl GitObject for Tag {
         .into_bytes()
     }
 
-    fn parse_body(_hash: String, body: &[u8]) -> Result<Self, BitError> {
+    fn parse_body(body: &[u8]) -> Result<Self, BitError> {
         let (Some(object), rest) = parse_line(b"object ", body) else {
             return Err(BitError::InvalidTag("Missing object".into()));
         };

@@ -1,9 +1,7 @@
 use clap::Args;
 
 use crate::{
-    commit::Commit,
-    errors::BitError,
-    object::{Object, ObjectType},
+    commands::show_ref::resolve_ref, commit::Commit, errors::BitError, object::{Object, ObjectType}
 };
 
 #[derive(Args, Debug)]
@@ -13,12 +11,13 @@ pub struct LogArg {
 
 impl LogArg {
     pub fn run(self) -> Result<(), BitError> {
-        for c in CommitIter::new(self.commit.unwrap()) {
-            let commit = c?;
+        let log_commit = self.commit.map_or_else(|| resolve_ref("HEAD"), Ok)?;
+        for item in CommitIter::new(log_commit) {
+            let (hash, commit) = item?;
             let (author, date) = commit.parse_author_date();
 
             // TODO: Color
-            println!("commit {}", commit.hash);
+            println!("commit {}", hash);
             println!("Author: {}", author);
             println!("Date:   {}", date.format("%a %h %d %H:%M:%S %Y %z"));
             println!();
@@ -42,21 +41,22 @@ impl CommitIter {
 }
 
 impl Iterator for CommitIter {
-    type Item = Result<Commit, BitError>;
+    type Item = Result<(String, Commit), BitError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let hash = self.next_commit.as_ref()?;
-        let object = Object::<Commit>::read_from_disk(hash, ObjectType::Commit);
-        let commit = object.map(|o| o.inner);
+        let hash = self.next_commit.as_ref()?.clone();
+        let object = Object::<Commit>::read_from_disk(&hash, ObjectType::Commit);
 
-        // TODO: I don't understand this
-        let Ok(commit) = commit else {
-            self.next_commit = None;
-            return Some(commit);
-        };
+        match object.map(|o| o.inner) {
+            Ok(commit) => {
+                self.next_commit = commit.parent.clone();
 
-        self.next_commit = commit.parent.clone();
-
-        Some(Ok(commit))
+                Some(Ok((hash, commit)))
+            }
+            Err(e) => {
+                self.next_commit = None;
+                Some(Err(e))
+            }
+        }
     }
 }
