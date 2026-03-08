@@ -18,7 +18,7 @@ impl GitObject for Tag {
         format!(
             "object {}\ntype {}\ntag {}\ntagger {}\n\n{}",
             self.object,
-            self.type_.to_string(),
+            Into::<&'static str>::into(self.type_),
             self.tag,
             self.tagger,
             self.message

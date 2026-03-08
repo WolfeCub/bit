@@ -1,10 +1,10 @@
 use std::{
     fs,
-    io::{self, Read},
+    io::{BufReader, Read},
     str::FromStr,
 };
 
-use flate2::read::ZlibDecoder;
+use flate2::bufread::ZlibDecoder;
 
 use crate::{
     errors::BitError,
@@ -29,7 +29,7 @@ impl<T: GitObject> Object<T> {
     pub fn serialize(&self) -> Vec<u8> {
         let body = self.inner.serialize_body();
         [
-            self.type_.to_string().as_bytes(),
+            Into::<&'static str>::into(self.type_).as_bytes(),
             b" ",
             body.len().to_string().as_bytes(),
             b"\0",
@@ -41,14 +41,14 @@ impl<T: GitObject> Object<T> {
     pub fn read_from_disk(hash: &str, type_: ObjectType) -> Result<Self, BitError> {
         let path = object_path(repo_root()?, hash);
 
-        // TODO: buffer this reading and decompressing
-        let compressed_contents = fs::read(&path)?;
-        let mut d = ZlibDecoder::new(io::Cursor::new(compressed_contents));
+        let file_buf_reader = BufReader::new(fs::File::open(&path)?);
+        let mut buf_decompressor = ZlibDecoder::new(file_buf_reader);
+
         let mut contents = vec![];
-        d.read_to_end(&mut contents)?;
+        buf_decompressor.read_to_end(&mut contents)?;
 
         // TODO: Size not needed?
-        let Some((rest, _size)) = read_header(&type_.to_string(), contents.as_slice()) else {
+        let Some((rest, _size)) = read_header(type_.into(), contents.as_slice()) else {
             panic!("fatal: bit cat-file {}: bad file", hash);
         };
 
@@ -59,7 +59,7 @@ impl<T: GitObject> Object<T> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ObjectType {
     Blob,
     Tree,
@@ -85,7 +85,17 @@ impl FromStr for ObjectType {
     }
 }
 
-// TODO: Maybe don't allocate here
+impl From<ObjectType> for &'static str {
+    fn from(type_: ObjectType) -> Self {
+        match type_ {
+            ObjectType::Blob => "blob",
+            ObjectType::Tree => "tree",
+            ObjectType::Commit => "commit",
+            ObjectType::Tag => "tag",
+        }
+    }
+}
+
 impl ToString for ObjectType {
     fn to_string(&self) -> String {
         match self {
