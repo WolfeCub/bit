@@ -8,7 +8,7 @@ use flate2::bufread::ZlibDecoder;
 
 use crate::{
     errors::BitError,
-    util::{object_path, repo_root},
+    util::object_path,
 };
 
 pub trait GitObject: Sized {
@@ -39,7 +39,7 @@ impl<T: GitObject> Object<T> {
     }
 
     pub fn read_from_disk(hash: &str, type_: ObjectType) -> Result<Self, BitError> {
-        let path = object_path(repo_root()?, hash);
+        let path = object_path(hash)?;
 
         let file_buf_reader = BufReader::new(fs::File::open(&path)?);
         let mut buf_decompressor = ZlibDecoder::new(file_buf_reader);

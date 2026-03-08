@@ -1,4 +1,4 @@
-use std::{borrow::Cow, io, str::Utf8Error, string::FromUtf8Error};
+use std::{borrow::Cow, io, path::StripPrefixError, str::Utf8Error, string::FromUtf8Error};
 
 use thiserror::Error;
 
@@ -33,4 +33,7 @@ pub enum BitError {
 
     #[error("Empty {0} message")]
     EmptyMessage(Cow<'static, str>),
+
+    #[error("Unable to strip prefix: {0}")]
+    StripPrefix(#[from] StripPrefixError)
 }

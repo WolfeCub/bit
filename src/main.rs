@@ -6,6 +6,7 @@ mod object;
 mod tree;
 mod util;
 mod tag;
+mod config;
 
 mod commands;
 use commands::cat_file::CatFileArg;

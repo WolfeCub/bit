@@ -1,9 +1,15 @@
-use std::{env, fs, path::{Path, PathBuf}, process::Command};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
+use cached::proc_macro::cached;
 use chrono::{DateTime, Local};
 
-use crate::errors::BitError;
+use crate::{config::Config, errors::BitError};
 
+#[cached(result = true)]
 pub fn repo_root() -> Result<PathBuf, BitError> {
     let mut cwd = env::current_dir()?;
     loop {
@@ -19,8 +25,11 @@ pub fn repo_root() -> Result<PathBuf, BitError> {
     }
 }
 
-pub fn object_path(root: PathBuf, hash: &str) -> PathBuf {
-    root.join(".bit/objects").join(&hash[..2]).join(&hash[2..])
+pub fn object_path(hash: &str) -> Result<PathBuf, BitError> {
+    Ok(repo_root()?
+        .join(".bit/objects")
+        .join(&hash[..2])
+        .join(&hash[2..]))
 }
 
 pub fn parse_line<'a>(prefix: &[u8], body: &'a [u8]) -> (Option<String>, &'a [u8]) {
@@ -67,4 +76,61 @@ where
     } else {
         Ok(filtered.join("\n"))
     }
+}
+
+// TODO: Local repo config
+pub fn get_config() -> Option<Config> {
+    let home = env::home_dir()?;
+    let config_path = home.join(".gitconfig");
+    if config_path.exists() {
+        let content = fs::read_to_string(config_path).ok()?;
+        serini::from_str(&content).ok()
+    } else {
+        None
+    }
+}
+
+pub fn get_user_info() -> (String, String) {
+    let (name, email) = get_config()
+        .and_then(|c| c.user)
+        .map(|u| (u.name, u.email))
+        .unwrap_or((None, None));
+
+    let resolved_name = name.unwrap_or_else(|| {
+        std::env::var("USER")
+            .or_else(|_| std::env::var("USERNAME"))
+            .unwrap_or_else(|_| "unknown".to_string())
+    });
+
+    let resolved_email = email.unwrap_or_else(|| {
+        let e = fs::read_to_string("/etc/hostname")
+            .or_else(|_| env::var("COMPUTERNAME"))
+            .unwrap_or_else(|_| "unknown".to_string());
+
+        format!("{}@{}", resolved_name, e.trim())
+    });
+
+    (resolved_name, resolved_email)
+}
+
+// TODO: Support globs and directories
+pub fn is_file_ignored(file: &str) -> bool {
+    ignore_patterns().iter().any(|p| p == file)
+}
+
+#[cached]
+pub fn ignore_patterns() -> Vec<String> {
+    let Ok(root) = repo_root() else {
+        return vec![];
+    };
+    let Ok(contents) = fs::read_to_string(root.join(".bitignore")) else {
+        return vec![];
+    };
+
+    contents
+        .lines()
+        .map(|line| line.trim())
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(|line| line.to_string())
+        .collect()
 }

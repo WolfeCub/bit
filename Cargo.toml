@@ -11,3 +11,6 @@ hex = "0.4.3"
 itertools = "0.14.0"
 sha1 = "0.10.6"
 thiserror = "2.0.18"
+serde = { version = "1.0", features = ["derive"] }
+serini = "0.2"
+cached = "0.56.0"

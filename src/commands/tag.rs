@@ -7,15 +7,17 @@ use crate::{
     errors::BitError,
     object::ObjectType,
     tag::Tag,
-    util::{editor, git_time, repo_root},
+    util::{editor, get_user_info, git_time, repo_root},
 };
 
 #[derive(Args, Debug)]
 pub struct TagArg {
-    #[arg(short = 'a', default_value_t = false)]
+    #[arg(short = 'a', default_value_t = false, requires = "name")]
     pub tag_object: bool,
 
-    #[arg(required_if_eq("tag_object", "true"))]
+    #[arg(short, long, requires = "tag_object")]
+    pub message: Option<String>,
+
     pub name: Option<String>,
     pub object: Option<String>,
 }
@@ -37,10 +39,13 @@ impl TagArg {
         };
 
         let hash_to_write = if self.tag_object {
-            // TODO: When we have a config file
-            let author = format!("{} <{}> {}", "Todo Name", "todo@email.ca", git_time());
+            let (user, email) = get_user_info();
+            let author = format!("{} <{}> {}", user, email, git_time());
 
-            let message = editor(root.join(".bit/TAG_EDITMSG"), &initial_tag_text(&tag_name))?;
+            let message = self.message.map_or_else(
+                || editor(root.join(".bit/TAG_EDITMSG"), &initial_tag_text(&tag_name)),
+                Ok,
+            )?;
 
             let tag = Tag {
                 object,

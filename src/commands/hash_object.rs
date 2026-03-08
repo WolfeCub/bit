@@ -10,7 +10,7 @@ use sha1::{Digest, Sha1};
 use crate::{
     errors::BitError,
     object::{GitObject, Object, ObjectType},
-    util::{object_path, repo_root},
+    util::object_path,
 };
 
 #[derive(Args, Debug)]
@@ -34,7 +34,11 @@ impl HashObjectArg {
     }
 }
 
-pub fn hash_object<T: GitObject>(type_: ObjectType, inner: T, write: bool) -> Result<String, BitError> {
+pub fn hash_object<T: GitObject>(
+    type_: ObjectType,
+    inner: T,
+    write: bool,
+) -> Result<String, BitError> {
     let object = Object::<T>::new(type_, inner);
 
     let object_output = object.serialize();
@@ -44,7 +48,7 @@ pub fn hash_object<T: GitObject>(type_: ObjectType, inner: T, write: bool) -> Re
     let hash = format!("{:x}", hashed);
 
     if write {
-        let path = object_path(repo_root()?, &hash);
+        let path = object_path(&hash)?;
 
         if !path.exists() {
             fs::create_dir_all(path.parent().expect("Could not get parent directory"))?;
@@ -58,7 +62,11 @@ pub fn hash_object<T: GitObject>(type_: ObjectType, inner: T, write: bool) -> Re
     Ok(hash)
 }
 
-pub fn hash_object_from_disk(path: &str, type_: ObjectType, write: bool) -> Result<String, BitError> {
+pub fn hash_object_from_disk(
+    path: &str,
+    type_: ObjectType,
+    write: bool,
+) -> Result<String, BitError> {
     let content = fs::read(path)?;
     hash_object(type_, content, write)
 }

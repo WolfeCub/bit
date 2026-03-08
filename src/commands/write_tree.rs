@@ -7,7 +7,7 @@ use crate::{
     commands::hash_object::{hash_object, hash_object_from_disk},
     errors::BitError,
     object::ObjectType,
-    tree::{Tree, TreeEntry},
+    tree::{Tree, TreeEntry}, util::{is_file_ignored, repo_root},
 };
 
 #[derive(Args, Debug)]
@@ -23,6 +23,10 @@ impl WriteTreeArg {
 
 fn write_tree(dir: &str) -> Result<String, BitError> {
     let read_dir = fs::read_dir(dir)?;
+
+    let root = repo_root()?.canonicalize()?;
+    let canonical_dir = Path::new(dir).canonicalize()?;
+    let repo_relative = canonical_dir.strip_prefix(&root)?;
 
     let entries = read_dir
         .filter_map(|d| {
@@ -50,8 +54,8 @@ fn write_tree(dir: &str) -> Result<String, BitError> {
                 return None;
             }
 
-            // TODO: DELETE ME this is just until .bitignore is implemented
-            if file_name == "target" {
+            let full_path = repo_relative.join(&file_name);
+            if is_file_ignored(&full_path.to_string_lossy()) {
                 return None;
             }
 
