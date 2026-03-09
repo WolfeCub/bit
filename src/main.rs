@@ -1,12 +1,12 @@
 use clap::Parser;
 
 mod commit;
+mod config;
 mod errors;
 mod object;
+mod tag;
 mod tree;
 mod util;
-mod tag;
-mod config;
 
 mod commands;
 use commands::cat_file::CatFileArg;
@@ -15,6 +15,7 @@ use commands::init::InitArg;
 
 use crate::commands::log::LogArg;
 use crate::commands::ls_tree::LsTreeArg;
+use crate::commands::rev_parse::RevParseArg;
 use crate::commands::show_ref::ShowRefArg;
 use crate::commands::tag::TagArg;
 use crate::commands::write_tree::WriteTreeArg;
@@ -30,6 +31,7 @@ enum Args {
     WriteTree(WriteTreeArg),
     ShowRef(ShowRefArg),
     Tag(TagArg),
+    RevParse(RevParseArg),
 }
 
 fn main() {
@@ -44,6 +46,7 @@ fn main() {
         Args::WriteTree(a) => a.run(),
         Args::ShowRef(a) => a.run(),
         Args::Tag(a) => a.run(),
+        Args::RevParse(a) => a.run(),
     };
 
     if let Err(e) = result {

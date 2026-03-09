@@ -7,7 +7,7 @@ use std::{
 use cached::proc_macro::cached;
 use chrono::{DateTime, Local};
 
-use crate::{config::Config, errors::BitError};
+use crate::{commands::show_ref::resolve_ref, config::Config, errors::BitError};
 
 #[cached(result = true)]
 pub fn repo_root() -> Result<PathBuf, BitError> {
@@ -133,4 +133,38 @@ pub fn ignore_patterns() -> Vec<String> {
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .map(|line| line.to_string())
         .collect()
+}
+
+pub fn find_hash(target: &str) -> Result<String, BitError> {
+    // if target == "HEAD" {
+    //     return resolve_ref("HEAD");
+    // }
+    //
+    // Min length for a shortened hash is 4
+    if target.len() >= 4 {
+        let dir = repo_root()?.join(".bit/objects").join(&target[..2]);
+        let entries = fs::read_dir(dir)
+            .map(|rd| rd.collect::<Vec<_>>())
+            .unwrap_or_default();
+
+        // If there's exactly one hash and it's prefix matches target return it
+        if let [Ok(e)] = entries.as_slice() {
+            let file_name = e.file_name();
+            let file_name = file_name.to_string_lossy();
+
+            if file_name.starts_with(&target[2..]) {
+                // Reconstruct the full hash
+                return Ok(format!("{}{}", &target[..2], file_name));
+            }
+        }
+    }
+
+    // Priority list of search paths
+    // i.e. refs/tags/name works but so does tags/name and just name
+    // "" is repo root this covers things like: HEAD, ORIG_HEAD, MERGE_HEAD, etc
+    // TODO: Currently the root is too loosey goosey `rev-parse COMMIT_EDITMSG` will just dump the file
+    ["", "refs/", "refs/tags/", "refs/heads/", "refs/remotes/"]
+        .iter()
+        .find_map(|prefix| resolve_ref(&format!("{}{}", prefix, target)).ok())
+        .ok_or(BitError::ResolveHashRef)
 }

@@ -35,5 +35,8 @@ pub enum BitError {
     EmptyMessage(Cow<'static, str>),
 
     #[error("Unable to strip prefix: {0}")]
-    StripPrefix(#[from] StripPrefixError)
+    StripPrefix(#[from] StripPrefixError),
+
+    #[error("Unable to resolve or ambiguous hash or ref")]
+    ResolveHashRef,
 }

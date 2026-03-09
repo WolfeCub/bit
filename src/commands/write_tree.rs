@@ -7,7 +7,8 @@ use crate::{
     commands::hash_object::{hash_object, hash_object_from_disk},
     errors::BitError,
     object::ObjectType,
-    tree::{Tree, TreeEntry}, util::{is_file_ignored, repo_root},
+    tree::{Tree, TreeEntry},
+    util::{is_file_ignored, repo_root},
 };
 
 #[derive(Args, Debug)]
@@ -66,34 +67,36 @@ fn write_tree(dir: &str) -> Result<String, BitError> {
             format!("{}{}", file_name, trailing)
         });
 
-    // TODO: Allocate the right size
-    let mut tree_entries = vec![];
-    for (file_name, file_type, file_permissions) in entries {
-        let type_ = if file_type.is_dir() {
-            ObjectType::Tree
-        } else {
-            ObjectType::Blob
-        };
+    let tree_entries = entries
+        .map(
+            |(file_name, file_type, file_permissions)| -> Result<TreeEntry, BitError> {
+                let type_ = if file_type.is_dir() {
+                    ObjectType::Tree
+                } else {
+                    ObjectType::Blob
+                };
 
-        let path = Path::new(dir)
-            .join(&file_name)
-            .to_str()
-            .expect("Dir and file name should be valid UTF-8")
-            .to_string();
+                let path = Path::new(dir)
+                    .join(&file_name)
+                    .to_str()
+                    .expect("Dir and file name should be valid UTF-8")
+                    .to_string();
 
-        let hash = if file_type.is_dir() {
-            // TODO: Recursion slow
-            write_tree(&path)?
-        } else {
-            hash_object_from_disk(&path, type_, true)?
-        };
+                let hash = if file_type.is_dir() {
+                    // TODO: Recursion slow?
+                    write_tree(&path)?
+                } else {
+                    hash_object_from_disk(&path, type_, true)?
+                };
 
-        tree_entries.push(TreeEntry {
-            mode: format!("{:o}", file_permissions.mode()),
-            path: file_name,
-            hash: hash,
-        });
-    }
+                Ok(TreeEntry {
+                    mode: format!("{:o}", file_permissions.mode()),
+                    path: file_name,
+                    hash: hash,
+                })
+            },
+        )
+        .collect::<Result<Vec<_>, BitError>>()?;
 
     let hash = hash_object(
         ObjectType::Tree,
