@@ -8,7 +8,6 @@ use flate2::{Compression, write::ZlibEncoder};
 use sha1::{Digest, Sha1};
 
 use crate::{
-    errors::BitError,
     object::{GitObject, Object, ObjectType},
     util::object_path,
 };
@@ -25,7 +24,7 @@ pub struct HashObjectArg {
 }
 
 impl HashObjectArg {
-    pub fn run(self) -> Result<(), BitError> {
+    pub fn run(self) -> anyhow::Result<()> {
         let hash = hash_object_from_disk(&self.path, self.type_, self.write)?;
 
         println!("{}", hash);
@@ -38,7 +37,7 @@ pub fn hash_object<T: GitObject>(
     type_: ObjectType,
     inner: T,
     write: bool,
-) -> Result<String, BitError> {
+) -> anyhow::Result<String> {
     let object = Object::<T>::new(type_, inner);
 
     let object_output = object.serialize();
@@ -66,7 +65,7 @@ pub fn hash_object_from_disk(
     path: &str,
     type_: ObjectType,
     write: bool,
-) -> Result<String, BitError> {
+) -> anyhow::Result<String> {
     let content = fs::read(path)?;
     hash_object(type_, content, write)
 }

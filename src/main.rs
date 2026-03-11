@@ -2,7 +2,7 @@ use clap::Parser;
 
 mod commit;
 mod config;
-mod errors;
+// mod errors;
 mod object;
 mod tag;
 mod tree;
@@ -25,6 +25,8 @@ use crate::commands::write_tree::WriteTreeArg;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 enum Args {
+    #[command(hide = true)]
+    MarkdownExport,
     Init(InitArg),
     CatFile(CatFileArg),
     HashObject(HashObjectArg),
@@ -41,6 +43,10 @@ fn main() {
     let args = Args::parse();
 
     let result = match args {
+        Args::MarkdownExport => {
+            clap_markdown::print_help_markdown::<Args>();
+            Ok(())
+        }
         Args::Init(a) => a.run(),
         Args::CatFile(a) => a.run(),
         Args::HashObject(a) => a.run(),

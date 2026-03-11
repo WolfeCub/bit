@@ -4,7 +4,6 @@ use clap::Args;
 
 use crate::{
     commands::{hash_object::hash_object, show_ref::resolve_ref},
-    errors::BitError,
     object::ObjectType,
     tag::Tag,
     util::{editor, get_user_info, git_time, repo_root},
@@ -23,7 +22,7 @@ pub struct TagArg {
 }
 
 impl TagArg {
-    pub fn run(self) -> Result<(), BitError> {
+    pub fn run(self) -> anyhow::Result<()> {
         let root = repo_root()?;
 
         let Some(tag_name) = self.name else {
@@ -67,7 +66,7 @@ impl TagArg {
     }
 }
 
-fn list_tags(root: &PathBuf) -> Result<Vec<String>, BitError> {
+fn list_tags(root: &PathBuf) -> anyhow::Result<Vec<String>> {
     let files = fs::read_dir(root.join(".bit/refs/tags"))?;
     files
         .map(|f| {

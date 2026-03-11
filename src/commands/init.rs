@@ -2,15 +2,13 @@ use std::{fs, path};
 
 use clap::Args;
 
-use crate::errors::BitError;
-
 #[derive(Args, Debug)]
 pub struct InitArg {
     pub path: Option<String>,
 }
 
 impl InitArg {
-    pub fn run(self) -> Result<(), BitError> {
+    pub fn run(self) -> anyhow::Result<()> {
         if let Some(path) = self.path.as_ref() {
             fs::create_dir(path)?;
         }

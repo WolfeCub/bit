@@ -1,6 +1,6 @@
 use clap::Args;
 
-use crate::{errors::BitError, util::find_hash};
+use crate::util::find_hash;
 
 #[derive(Args, Debug)]
 pub struct RevParseArg {
@@ -8,7 +8,7 @@ pub struct RevParseArg {
 }
 
 impl RevParseArg {
-    pub fn run(self) -> Result<(), BitError> {
+    pub fn run(self) -> anyhow::Result<()> {
         let Some(hash_or_ref) = self.hash_or_ref else {
             return Ok(());
         };

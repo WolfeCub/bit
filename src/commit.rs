@@ -1,6 +1,8 @@
 use chrono::{DateTime, FixedOffset};
 
-use crate::{errors::BitError, object::GitObject, util::parse_line};
+use crate::{object::GitObject, util::parse_line};
+
+use anyhow::anyhow;
 
 #[derive(Debug)]
 pub struct Commit {
@@ -30,27 +32,25 @@ impl GitObject for Commit {
         .into_bytes()
     }
 
-    fn parse_body(body: &[u8]) -> Result<Self, BitError> {
+    fn parse_body(body: &[u8]) -> anyhow::Result<Self> {
         let (Some(tree), rest) = parse_line(b"tree ", body) else {
-            return Err(BitError::InvalidCommit("Missing tree".into()));
+            return Err(anyhow!("Invalid commit: Missing tree"));
         };
 
         let (parent, rest) = parse_line(b"parent ", rest);
 
         let (Some(author), rest) = parse_line(b"author ", rest) else {
-            return Err(BitError::InvalidCommit("Missing author".into()));
+            return Err(anyhow!("Invalid commit: Missing author"));
         };
 
         let (Some(committer), rest) = parse_line(b"committer ", rest) else {
-            return Err(BitError::InvalidCommit("Missing committer".into()));
+            return Err(anyhow!("Invalid commit: Missing committer"));
         };
 
         let (gpgsig, rest) = parse_line(b"gpgsig ", rest);
 
         let Some(rest) = rest.strip_prefix(b"\n") else {
-            return Err(BitError::InvalidCommit(
-                "Require empty line before body".into(),
-            ));
+            return Err(anyhow!("Invalid commit: Require empty line before body"));
         };
 
         Ok(Self {

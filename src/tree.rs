@@ -1,6 +1,8 @@
+use anyhow::Context;
 use itertools::Itertools;
+use anyhow::anyhow;
 
-use crate::{errors::BitError, object::GitObject};
+use crate::object::GitObject;
 
 #[derive(Debug)]
 pub struct Tree {
@@ -15,7 +17,7 @@ impl GitObject for Tree {
             .collect::<Vec<u8>>()
     }
 
-    fn parse_body(body: &[u8]) -> Result<Self, BitError> {
+    fn parse_body(body: &[u8]) -> anyhow::Result<Self> {
         let mut entries = Vec::new();
         let mut iter = body;
         loop {
@@ -41,18 +43,16 @@ pub struct TreeEntry {
 }
 
 impl TreeEntry {
-    pub fn parse(line: &[u8]) -> Result<(Self, &[u8]), BitError> {
+    pub fn parse(line: &[u8]) -> anyhow::Result<(Self, &[u8])> {
         let (mode, rest) = line
             .splitn(2, |c| *c == b' ')
             .next_tuple()
-            .ok_or_else(|| BitError::InvalidTree("Invalid tree entry. No space found.".into()))?;
+            .context("Invalid tree entry. No space found.")?;
 
         let (path, rest) = rest
             .splitn(2, |c| *c == b'\0')
             .next_tuple()
-            .ok_or_else(|| {
-                BitError::InvalidTree("Invalid tree entry. No null byte found.".into())
-            })?;
+            .context("Invalid tree entry. No null byte found.")?;
 
         let hash = hex::encode(&rest[..20]);
 
@@ -78,16 +78,16 @@ impl TreeEntry {
         out
     }
 
-    pub fn get_type(&self) -> Result<&'static str, BitError> {
+    pub fn get_type(&self) -> anyhow::Result<&'static str> {
         let mode = u32::from_str_radix(&self.mode, 8)
-            .map_err(|_| BitError::InvalidTreeEntryMode(self.mode.clone()))?;
+            .with_context(|| format!("Invalid tree entry mode: {}", self.mode))?;
 
         match mode >> 12 {
             0o04 => Ok("tree"),
             0o10 => Ok("blob"),
             0o12 => Ok("blob"),
             0o16 => Ok("commit"),
-            _ => Err(BitError::InvalidTreeEntryMode(self.mode.clone())),
+            _ => Err(anyhow!("Invalid tree entry mode: {}", self.mode)),
         }
     }
 }

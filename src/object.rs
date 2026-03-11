@@ -5,15 +5,15 @@ use std::{
 };
 
 use flate2::bufread::ZlibDecoder;
+use anyhow::anyhow;
 
 use crate::{
-    errors::BitError,
     util::object_path,
 };
 
 pub trait GitObject: Sized {
     fn serialize_body(&self) -> Vec<u8>;
-    fn parse_body(body: &[u8]) -> Result<Self, BitError>;
+    fn parse_body(body: &[u8]) -> anyhow::Result<Self>;
 }
 
 pub struct Object<T: GitObject> {
@@ -38,7 +38,7 @@ impl<T: GitObject> Object<T> {
         .concat()
     }
 
-    pub fn read_from_disk(hash: &str, type_: ObjectType) -> Result<Self, BitError> {
+    pub fn read_from_disk(hash: &str, type_: ObjectType) -> anyhow::Result<Self> {
         let path = object_path(hash)?;
 
         let file_buf_reader = BufReader::new(fs::File::open(&path)?);
@@ -67,12 +67,8 @@ pub enum ObjectType {
     Tag,
 }
 
-#[derive(thiserror::Error, Debug)]
-#[error("Unknown object type: {0}")]
-pub struct UnknownObjectTypeError(String);
-
 impl FromStr for ObjectType {
-    type Err = UnknownObjectTypeError;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -80,7 +76,7 @@ impl FromStr for ObjectType {
             "tree" => Ok(ObjectType::Tree),
             "commit" => Ok(ObjectType::Commit),
             "tag" => Ok(ObjectType::Tag),
-            t => Err(UnknownObjectTypeError(t.to_string())),
+            t => Err(anyhow!("Unknown object type: {}", t)),
         }
     }
 }
@@ -137,7 +133,7 @@ impl GitObject for Vec<u8> {
         self.clone()
     }
 
-    fn parse_body(body: &[u8]) -> Result<Self, BitError> {
+    fn parse_body(body: &[u8]) -> anyhow::Result<Self> {
         Ok(body.to_vec())
     }
 }

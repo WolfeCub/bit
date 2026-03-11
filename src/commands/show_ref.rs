@@ -5,13 +5,13 @@ use std::{
 
 use clap::Args;
 
-use crate::{errors::BitError, util::repo_root};
+use crate::{util::repo_root};
 
 #[derive(Args, Debug)]
 pub struct ShowRefArg {}
 
 impl ShowRefArg {
-    pub fn run(self) -> Result<(), BitError> {
+    pub fn run(self) -> anyhow::Result<()> {
         let root = repo_root()?;
         let mut refs = list_ref_paths(root.join(".bit/refs"))?;
         refs.sort();
@@ -30,14 +30,14 @@ impl ShowRefArg {
     }
 }
 
-pub fn resolve_ref(reference: &str) -> Result<String, BitError> {
+pub fn resolve_ref(reference: &str) -> anyhow::Result<String> {
     let root = repo_root()?;
     let path = root.join(".bit").join(reference);
 
     resolve_ref_path(path, &root)
 }
 
-fn resolve_ref_path(path: impl AsRef<Path>, root: &PathBuf) -> Result<String, BitError> {
+fn resolve_ref_path(path: impl AsRef<Path>, root: &PathBuf) -> anyhow::Result<String> {
     let content = fs::read_to_string(path)?;
     if let Some(stripped) = content.strip_prefix("ref: ") {
         let p = root.join(".bit").join(stripped.trim());
@@ -47,7 +47,7 @@ fn resolve_ref_path(path: impl AsRef<Path>, root: &PathBuf) -> Result<String, Bi
 }
 
 // TODO: Maybe more efficient
-fn list_ref_paths(path: impl AsRef<Path>) -> Result<Vec<String>, BitError> {
+fn list_ref_paths(path: impl AsRef<Path>) -> anyhow::Result<Vec<String>> {
     let entries = fs::read_dir(path)?;
     let mut files = Vec::new();
 

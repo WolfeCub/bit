@@ -1,5 +1,4 @@
 use crate::{
-    errors::BitError,
     index::{Index, IndexEntry},
 };
 use chrono::{DateTime, Local};
@@ -16,7 +15,7 @@ pub struct LsFilesArg {
 }
 
 impl LsFilesArg {
-    pub fn run(self) -> Result<(), BitError> {
+    pub fn run(self) -> anyhow::Result<()> {
         let index = Index::parse_from_disk()?;
 
         for entry in &index.entries {

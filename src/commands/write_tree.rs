@@ -5,7 +5,6 @@ use itertools::Itertools;
 
 use crate::{
     commands::hash_object::{hash_object, hash_object_from_disk},
-    errors::BitError,
     object::ObjectType,
     tree::{Tree, TreeEntry},
     util::{is_file_ignored, repo_root},
@@ -15,14 +14,14 @@ use crate::{
 pub struct WriteTreeArg {}
 
 impl WriteTreeArg {
-    pub fn run(self) -> Result<(), BitError> {
+    pub fn run(self) -> anyhow::Result<()> {
         let hash = write_tree(".")?;
         println!("{}", hash);
         Ok(())
     }
 }
 
-fn write_tree(dir: &str) -> Result<String, BitError> {
+fn write_tree(dir: &str) -> anyhow::Result<String> {
     let read_dir = fs::read_dir(dir)?;
 
     let root = repo_root()?.canonicalize()?;
@@ -69,7 +68,7 @@ fn write_tree(dir: &str) -> Result<String, BitError> {
 
     let tree_entries = entries
         .map(
-            |(file_name, file_type, file_permissions)| -> Result<TreeEntry, BitError> {
+            |(file_name, file_type, file_permissions)| -> anyhow::Result<TreeEntry> {
                 let type_ = if file_type.is_dir() {
                     ObjectType::Tree
                 } else {
@@ -96,7 +95,7 @@ fn write_tree(dir: &str) -> Result<String, BitError> {
                 })
             },
         )
-        .collect::<Result<Vec<_>, BitError>>()?;
+        .collect::<anyhow::Result<Vec<_>>>()?;
 
     let hash = hash_object(
         ObjectType::Tree,

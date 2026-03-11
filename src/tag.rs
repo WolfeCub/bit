@@ -1,8 +1,9 @@
 use crate::{
-    errors::BitError,
     object::{GitObject, ObjectType},
     util::parse_line,
 };
+
+use anyhow::{Context, anyhow};
 
 #[derive(Debug)]
 pub struct Tag {
@@ -26,26 +27,26 @@ impl GitObject for Tag {
         .into_bytes()
     }
 
-    fn parse_body(body: &[u8]) -> Result<Self, BitError> {
+    fn parse_body(body: &[u8]) -> anyhow::Result<Self> {
         let (Some(object), rest) = parse_line(b"object ", body) else {
-            return Err(BitError::InvalidTag("Missing object".into()));
+            return Err(anyhow!("Invalid tag: Missing object"));
         };
 
         let (Some(type_), rest) = parse_line(b"type ", rest) else {
-            return Err(BitError::InvalidTag("Missing type".into()));
+            return Err(anyhow!("Invalid tag: Missing type"));
         };
 
         let (Some(tag), rest) = parse_line(b"tag ", rest) else {
-            return Err(BitError::InvalidTag("Missing tag".into()));
+            return Err(anyhow!("Invalid tag: Missing tag"));
         };
 
         let (Some(tagger), rest) = parse_line(b"tagger ", rest) else {
-            return Err(BitError::InvalidTag("Missing tagger".into()));
+            return Err(anyhow!("Invalid tag: Missing tagger"));
         };
 
         let rest = rest
             .strip_prefix(b"\n")
-            .ok_or_else(|| BitError::InvalidTag("Require empty line before message".into()))?;
+            .context("Require empty line before message")?;
 
         Ok(Self {
             object,

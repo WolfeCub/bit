@@ -4,13 +4,14 @@ use std::{
     process::Command,
 };
 
+use anyhow::{Context, anyhow};
 use cached::proc_macro::cached;
 use chrono::{DateTime, Local};
 
-use crate::{commands::show_ref::resolve_ref, config::Config, errors::BitError};
+use crate::{commands::show_ref::resolve_ref, config::Config};
 
 #[cached(result = true)]
-pub fn repo_root() -> Result<PathBuf, BitError> {
+pub fn repo_root() -> anyhow::Result<PathBuf> {
     let mut cwd = env::current_dir()?;
     loop {
         if cwd.join(".bit").exists() {
@@ -20,12 +21,14 @@ pub fn repo_root() -> Result<PathBuf, BitError> {
         if let Some(next) = cwd.parent() {
             cwd = next.to_path_buf();
         } else {
-            return Err(BitError::NotInRepo);
+            return Err(anyhow!(
+                "Not a bit repository (or any of the parent directories)"
+            ));
         }
     }
 }
 
-pub fn object_path(hash: &str) -> Result<PathBuf, BitError> {
+pub fn object_path(hash: &str) -> anyhow::Result<PathBuf> {
     Ok(repo_root()?
         .join(".bit/objects")
         .join(&hash[..2])
@@ -51,7 +54,7 @@ pub fn git_time() -> String {
     now.format("%s %z").to_string()
 }
 
-pub fn editor<P>(path: P, initial_content: &str) -> Result<String, BitError>
+pub fn editor<P>(path: P, initial_content: &str) -> anyhow::Result<String>
 where
     P: AsRef<Path>,
     P: AsRef<std::ffi::OsStr>,
@@ -72,7 +75,7 @@ where
         .collect::<Vec<_>>();
 
     if filtered.is_empty() {
-        Err(BitError::EmptyMessage("tag".into()))
+        Err(anyhow!("Empty tag message"))
     } else {
         Ok(filtered.join("\n"))
     }
@@ -135,7 +138,7 @@ pub fn ignore_patterns() -> Vec<String> {
         .collect()
 }
 
-pub fn find_hash(target: &str) -> Result<String, BitError> {
+pub fn find_hash(target: &str) -> anyhow::Result<String> {
     // if target == "HEAD" {
     //     return resolve_ref("HEAD");
     // }
@@ -166,5 +169,5 @@ pub fn find_hash(target: &str) -> Result<String, BitError> {
     ["", "refs/", "refs/tags/", "refs/heads/", "refs/remotes/"]
         .iter()
         .find_map(|prefix| resolve_ref(&format!("{}{}", prefix, target)).ok())
-        .ok_or(BitError::ResolveHashRef)
+        .context("Unable to resolve or ambiguous hash or ref")
 }

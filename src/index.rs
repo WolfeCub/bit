@@ -3,8 +3,9 @@ use std::{
     io::{self, BufReader, Read, Seek},
     path::Path,
 };
+use anyhow::anyhow;
 
-use crate::{errors::BitError, util::repo_root};
+use crate::util::repo_root;
 
 #[derive(Debug)]
 pub struct Index {
@@ -12,20 +13,18 @@ pub struct Index {
 }
 
 impl Index {
-    pub fn parse_from_disk() -> Result<Self, BitError> {
+    pub fn parse_from_disk() -> anyhow::Result<Self> {
         let path = repo_root()?.join(".bit/index");
 
         let mut reader = IndexReader::new(&path)?;
 
         if reader.read_4_bytes()? != b"DIRC" {
-            return Err(BitError::InvalidIndex("Missing DIRC header".into()));
+            return Err(anyhow!("Missing DIRC header"));
         }
 
         let version = reader.read_4_bytes()?;
         if version != [0, 0, 0, 2] {
-            return Err(BitError::InvalidIndex(
-                format!("Unsupported index version: {version:?}").into(),
-            ));
+            return Err(anyhow!("Invalid index: Unsupported index version: {version:?}"));
         }
 
         let num_entries = reader.read_u32()?;
@@ -151,7 +150,7 @@ impl IndexReader {
         Ok(String::from_utf8_lossy(&buf).into())
     }
 
-    fn read_timepair(&mut self) -> Result<TimePair, BitError> {
+    fn read_timepair(&mut self) -> anyhow::Result<TimePair> {
         let s = self.read_u32()?;
         let ns = self.read_u32()?;
 

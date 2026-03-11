@@ -4,7 +4,6 @@ use colored::Colorize;
 use crate::{
     commands::show_ref::resolve_ref,
     commit::Commit,
-    errors::BitError,
     object::{Object, ObjectType},
 };
 
@@ -14,7 +13,7 @@ pub struct LogArg {
 }
 
 impl LogArg {
-    pub fn run(self) -> Result<(), BitError> {
+    pub fn run(self) -> anyhow::Result<()> {
         let log_commit = self.commit.map_or_else(|| resolve_ref("HEAD"), Ok)?;
         for item in CommitIter::new(log_commit) {
             let (hash, commit) = item?;
@@ -45,7 +44,7 @@ impl CommitIter {
 }
 
 impl Iterator for CommitIter {
-    type Item = Result<(String, Commit), BitError>;
+    type Item = anyhow::Result<(String, Commit)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let hash = self.next_commit.as_ref()?.clone();
