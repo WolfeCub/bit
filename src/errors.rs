@@ -39,4 +39,7 @@ pub enum BitError {
 
     #[error("Unable to resolve or ambiguous hash or ref")]
     ResolveHashRef,
+
+    #[error("Invalid index: {0}")]
+    InvalidIndex(Cow<'static, str>),
 }

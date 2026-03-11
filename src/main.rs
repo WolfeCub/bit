@@ -7,6 +7,7 @@ mod object;
 mod tag;
 mod tree;
 mod util;
+mod index;
 
 mod commands;
 use commands::cat_file::CatFileArg;
@@ -14,6 +15,7 @@ use commands::hash_object::HashObjectArg;
 use commands::init::InitArg;
 
 use crate::commands::log::LogArg;
+use crate::commands::ls_files::LsFilesArg;
 use crate::commands::ls_tree::LsTreeArg;
 use crate::commands::rev_parse::RevParseArg;
 use crate::commands::show_ref::ShowRefArg;
@@ -32,6 +34,7 @@ enum Args {
     ShowRef(ShowRefArg),
     Tag(TagArg),
     RevParse(RevParseArg),
+    LsFiles(LsFilesArg),
 }
 
 fn main() {
@@ -47,6 +50,7 @@ fn main() {
         Args::ShowRef(a) => a.run(),
         Args::Tag(a) => a.run(),
         Args::RevParse(a) => a.run(),
+        Args::LsFiles(a) => a.run(),
     };
 
     if let Err(e) = result {

@@ -7,3 +7,4 @@ pub mod write_tree;
 pub mod show_ref;
 pub mod tag;
 pub mod rev_parse;
+pub mod ls_files;

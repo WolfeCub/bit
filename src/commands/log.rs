@@ -1,7 +1,11 @@
 use clap::Args;
+use colored::Colorize;
 
 use crate::{
-    commands::show_ref::resolve_ref, commit::Commit, errors::BitError, object::{Object, ObjectType}
+    commands::show_ref::resolve_ref,
+    commit::Commit,
+    errors::BitError,
+    object::{Object, ObjectType},
 };
 
 #[derive(Args, Debug)]
@@ -16,8 +20,8 @@ impl LogArg {
             let (hash, commit) = item?;
             let (author, date) = commit.parse_author_date();
 
-            // TODO: Color
-            println!("commit {}", hash);
+            // TODO: Extra ref info (HEAD -> main, tag, etc)
+            println!("{} {}", "commit".yellow(), hash.yellow());
             println!("Author: {}", author);
             println!("Date:   {}", date.format("%a %h %d %H:%M:%S %Y %z"));
             println!();
