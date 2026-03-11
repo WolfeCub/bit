@@ -3,9 +3,9 @@ use colored::Colorize;
 
 use crate::{
     commands::show_ref::resolve_ref,
-    commit::Commit,
-    object::{Object, ObjectType},
+    objects::{Object, ObjectType},
 };
+use crate::objects::Commit;
 
 #[derive(Args, Debug)]
 pub struct LogArg {

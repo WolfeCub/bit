@@ -1,26 +1,20 @@
 use clap::Parser;
 
-mod commit;
-mod config;
-// mod errors;
-mod object;
-mod tag;
-mod tree;
+mod objects;
 mod util;
-mod index;
 
 mod commands;
 use commands::cat_file::CatFileArg;
+use commands::check_ignore::CheckIgnoreArgs;
 use commands::hash_object::HashObjectArg;
 use commands::init::InitArg;
-
-use crate::commands::log::LogArg;
-use crate::commands::ls_files::LsFilesArg;
-use crate::commands::ls_tree::LsTreeArg;
-use crate::commands::rev_parse::RevParseArg;
-use crate::commands::show_ref::ShowRefArg;
-use crate::commands::tag::TagArg;
-use crate::commands::write_tree::WriteTreeArg;
+use commands::log::LogArg;
+use commands::ls_files::LsFilesArg;
+use commands::ls_tree::LsTreeArg;
+use commands::rev_parse::RevParseArg;
+use commands::show_ref::ShowRefArg;
+use commands::tag::TagArg;
+use commands::write_tree::WriteTreeArg;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -37,6 +31,7 @@ enum Args {
     Tag(TagArg),
     RevParse(RevParseArg),
     LsFiles(LsFilesArg),
+    CheckIgnore(CheckIgnoreArgs),
 }
 
 fn main() {
@@ -57,6 +52,7 @@ fn main() {
         Args::Tag(a) => a.run(),
         Args::RevParse(a) => a.run(),
         Args::LsFiles(a) => a.run(),
+        Args::CheckIgnore(a) => a.run(),
     };
 
     if let Err(e) = result {

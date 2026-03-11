@@ -1,6 +1,5 @@
 use crate::{
-    object::{GitObject, ObjectType},
-    util::parse_line,
+    objects::{GitObject, ObjectType}, util::parse_line
 };
 
 use anyhow::{Context, anyhow};

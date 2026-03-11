@@ -1,8 +1,7 @@
 use clap::Args;
 
 use crate::{
-    object::{Object, ObjectType},
-    tree::Tree,
+    objects::{Object, ObjectType, Tree},
 };
 
 #[derive(Args, Debug)]

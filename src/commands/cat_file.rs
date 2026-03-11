@@ -1,7 +1,7 @@
 use clap::Args;
 
 use crate::{
-    object::{Object, ObjectType},
+    objects::{Object, ObjectType},
 };
 
 #[derive(Args, Debug)]

@@ -2,7 +2,7 @@ use anyhow::Context;
 use itertools::Itertools;
 use anyhow::anyhow;
 
-use crate::object::GitObject;
+use crate::objects::GitObject;
 
 #[derive(Debug)]
 pub struct Tree {

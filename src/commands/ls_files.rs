@@ -1,5 +1,5 @@
 use crate::{
-    index::{Index, IndexEntry},
+    objects::{Index, IndexEntry},
 };
 use chrono::{DateTime, Local};
 use clap::Args;

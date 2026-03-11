@@ -5,8 +5,7 @@ use itertools::Itertools;
 
 use crate::{
     commands::hash_object::{hash_object, hash_object_from_disk},
-    object::ObjectType,
-    tree::{Tree, TreeEntry},
+    objects::{ObjectType, Tree, TreeEntry},
     util::{is_file_ignored, repo_root},
 };
 

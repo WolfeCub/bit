@@ -8,7 +8,7 @@ use anyhow::{Context, anyhow};
 use cached::proc_macro::cached;
 use chrono::{DateTime, Local};
 
-use crate::{commands::show_ref::resolve_ref, config::Config};
+use crate::{commands::show_ref::resolve_ref, objects::Config};
 
 #[cached(result = true)]
 pub fn repo_root() -> anyhow::Result<PathBuf> {
