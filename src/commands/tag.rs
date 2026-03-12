@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf};
 use clap::Args;
 
 use crate::{
-    commands::{hash_object::hash_object, show_ref::resolve_ref},
+    commands::{hash_object::hash_object_hex, show_ref::resolve_ref},
     objects::{ObjectType, Tag},
     util::{editor, get_user_info, git_time, repo_root},
 };
@@ -52,7 +52,7 @@ impl TagArg {
                 tagger: author,
                 message,
             };
-            hash_object(ObjectType::Tag, tag, true)?
+            hash_object_hex(ObjectType::Tag, tag, true)?
         } else {
             object
         };

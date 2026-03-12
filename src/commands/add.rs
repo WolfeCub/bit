@@ -1,16 +1,15 @@
 use std::{
-    fs::{self, File},
+    fs::File,
     io::Read,
     os::unix::fs::MetadataExt,
 };
 
 use anyhow::Context;
 use clap::Args;
-use sha1::{Digest, Sha1};
 
 use crate::{
-    commands::remove,
-    objects::{IndexEntry, TimePair},
+    commands::{hash_object::hash_object, remove},
+    objects::{IndexEntry, ObjectType, TimePair},
     util::normalize_paths,
 };
 
@@ -39,9 +38,7 @@ impl AddArg {
             file.read_to_end(&mut bytes)
                 .with_context(|| format!("Failed to read file '{}'", path))?;
 
-            let mut hasher = Sha1::new();
-            hasher.update(&bytes);
-            let hashed = hasher.finalize();
+            let hash = hash_object(ObjectType::Blob, bytes, true)?;
 
             // TODO: This is linux only currently
             let entry = IndexEntry {
@@ -59,8 +56,8 @@ impl AddArg {
                 uid: metadata.uid(),
                 gid: metadata.gid(),
                 size: u32::try_from(metadata.size())?,
-                sha: hashed.into(),
-                flags: metadata.len().min(0xFFF) as u16, // TODO: We're ignoring the upper set bits for now
+                sha: hash,
+                flags: normalized.len().min(0xFFF) as u16, // TODO: We're ignoring the upper set bits for now
                 name: normalized,
             };
 
