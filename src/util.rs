@@ -145,3 +145,20 @@ pub fn find_hash(target: &str) -> anyhow::Result<String> {
         .find_map(|prefix| resolve_ref(&format!("{}{}", prefix, target)).ok())
         .context("Unable to resolve or ambiguous hash or ref")
 }
+
+pub fn normalize_paths(paths: &[String]) -> anyhow::Result<Vec<String>> {
+    let root = repo_root()?;
+
+    let cwd = env::current_dir()?;
+    paths
+        .iter()
+        .map(|path| -> anyhow::Result<String> {
+            let absolute_path = cwd.join(path).canonicalize()?;
+            let repo_relative_path = absolute_path
+                .strip_prefix(&root)
+                .with_context(|| format!("Path {absolute_path:?} is not within the repository"))?;
+
+            Ok(repo_relative_path.to_string_lossy().into())
+        })
+        .collect::<anyhow::Result<Vec<String>>>()
+}

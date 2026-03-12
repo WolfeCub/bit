@@ -37,7 +37,7 @@ pub fn hash_object<T: GitObject>(
     type_: ObjectType,
     inner: T,
     write: bool,
-) -> anyhow::Result<String> {
+) -> anyhow::Result<[u8; 20]> {
     let object = Object::<T>::new(type_, inner);
 
     let object_output = object.serialize();
@@ -58,14 +58,19 @@ pub fn hash_object<T: GitObject>(
         }
     }
 
-    Ok(hash)
+    Ok(hashed.into())
 }
 
-pub fn hash_object_from_disk(
-    path: &str,
+pub fn hash_object_hex<T: GitObject>(
     type_: ObjectType,
+    inner: T,
     write: bool,
 ) -> anyhow::Result<String> {
+    let hash = hash_object(type_, inner, write)?;
+    Ok(hex::encode(hash))
+}
+
+pub fn hash_object_from_disk(path: &str, type_: ObjectType, write: bool) -> anyhow::Result<String> {
     let content = fs::read(path)?;
-    hash_object(type_, content, write)
+    hash_object_hex(type_, content, write)
 }

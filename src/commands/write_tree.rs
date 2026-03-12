@@ -4,7 +4,7 @@ use clap::Args;
 use itertools::Itertools;
 
 use crate::{
-    commands::hash_object::{hash_object, hash_object_from_disk},
+    commands::hash_object::{hash_object_hex, hash_object_from_disk},
     objects::{Ignore, ObjectType, Tree, TreeEntry},
     util::repo_root,
 };
@@ -98,7 +98,7 @@ fn write_tree(dir: &str) -> anyhow::Result<String> {
         )
         .collect::<anyhow::Result<Vec<_>>>()?;
 
-    let hash = hash_object(
+    let hash = hash_object_hex(
         ObjectType::Tree,
         Tree {
             entries: tree_entries,

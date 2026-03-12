@@ -16,6 +16,7 @@ use commands::show_ref::ShowRefArg;
 use commands::tag::TagArg;
 use commands::write_tree::WriteTreeArg;
 
+use crate::commands::add::AddArg;
 use crate::commands::remove::RemoveArg;
 use crate::commands::testing::TestArg;
 
@@ -39,6 +40,7 @@ enum Args {
     LsFiles(LsFilesArg),
     CheckIgnore(CheckIgnoreArg),
     Rm(RemoveArg),
+    Add(AddArg),
 }
 
 fn main() {
@@ -63,6 +65,7 @@ fn main() {
         Args::LsFiles(a) => a.run(),
         Args::CheckIgnore(a) => a.run(),
         Args::Rm(a) => a.run(),
+        Args::Add(a) => a.run(),
     };
 
     if let Err(e) = result {
