@@ -10,3 +10,5 @@ mod tag;
 pub use tag::*;
 mod tree;
 pub use tree::*;
+mod ignore;
+pub use ignore::*;

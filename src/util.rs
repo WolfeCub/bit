@@ -116,33 +116,7 @@ pub fn get_user_info() -> (String, String) {
     (resolved_name, resolved_email)
 }
 
-// TODO: Support globs and directories
-pub fn is_file_ignored(file: &str) -> bool {
-    ignore_patterns().iter().any(|p| p == file)
-}
-
-#[cached]
-pub fn ignore_patterns() -> Vec<String> {
-    let Ok(root) = repo_root() else {
-        return vec![];
-    };
-    let Ok(contents) = fs::read_to_string(root.join(".bitignore")) else {
-        return vec![];
-    };
-
-    contents
-        .lines()
-        .map(|line| line.trim())
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .map(|line| line.to_string())
-        .collect()
-}
-
 pub fn find_hash(target: &str) -> anyhow::Result<String> {
-    // if target == "HEAD" {
-    //     return resolve_ref("HEAD");
-    // }
-    //
     // Min length for a shortened hash is 4
     if target.len() >= 4 {
         let dir = repo_root()?.join(".bit/objects").join(&target[..2]);

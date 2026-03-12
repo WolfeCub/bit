@@ -5,8 +5,8 @@ use itertools::Itertools;
 
 use crate::{
     commands::hash_object::{hash_object, hash_object_from_disk},
-    objects::{ObjectType, Tree, TreeEntry},
-    util::{is_file_ignored, repo_root},
+    objects::{Ignore, ObjectType, Tree, TreeEntry},
+    util::repo_root,
 };
 
 #[derive(Args, Debug)]
@@ -26,6 +26,8 @@ fn write_tree(dir: &str) -> anyhow::Result<String> {
     let root = repo_root()?.canonicalize()?;
     let canonical_dir = Path::new(dir).canonicalize()?;
     let repo_relative = canonical_dir.strip_prefix(&root)?;
+
+    let bitignore = Ignore::build_from_disk()?;
 
     let entries = read_dir
         .filter_map(|d| {
@@ -54,7 +56,7 @@ fn write_tree(dir: &str) -> anyhow::Result<String> {
             }
 
             let full_path = repo_relative.join(&file_name);
-            if is_file_ignored(&full_path.to_string_lossy()) {
+            if bitignore.is_file_ignored(&full_path.to_string_lossy(), file_type.is_dir()) {
                 return None;
             }
 
