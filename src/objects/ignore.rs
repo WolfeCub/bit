@@ -172,7 +172,11 @@ fn match_tokens(tokens: &[Token], input: &str) -> bool {
             .next()
             .is_some_and(|c| c != '/' && match_tokens(rest, &input[1..])),
         Token::AnyFile => {
-            (0..=input.find('/').unwrap_or(input.len())).any(|i| match_tokens(rest, &input[i..]))
+            // * matches any number of not '/' characters, so find how far we can
+            // consume before hitting a slash (or end of input), then try each
+            // possible match length from 0 up to that limit
+            let max = input.find('/').unwrap_or(input.len());
+            (0..=max).any(|i| match_tokens(rest, &input[i..]))
         }
         Token::AnyPath => {
             // `**/` and `**` should behave the same, so skip a leading slash in the remainder
@@ -204,11 +208,13 @@ fn char_in_class(c: char, class: &[char]) -> bool {
     let mut i = 0;
     while i < class.len() {
         if class.get(i + 1) == Some(&'-') && i + 2 < class.len() {
+            // Range pattern like 'a-z': check if c falls between the two bounds
             if c >= class[i] && c <= class[i + 2] {
                 return true;
             }
             i += 3;
         } else {
+            // Literal character: check for exact match
             if c == class[i] {
                 return true;
             }
