@@ -34,6 +34,7 @@ This document contains the help content for the `bit` command-line program.
 * [`bit tag`↴](#bit-tag)
 * [`bit rev-parse`↴](#bit-rev-parse)
 * [`bit ls-files`↴](#bit-ls-files)
+* [`bit check-ignore`↴](#bit-check-ignore)
 
 ## `bit`
 
@@ -51,6 +52,7 @@ This document contains the help content for the `bit` command-line program.
 * `tag` — 
 * `rev-parse` — 
 * `ls-files` — 
+* `check-ignore` — 
 
 
 
@@ -163,6 +165,16 @@ This document contains the help content for the `bit` command-line program.
 * `-v`, `--verbose` — This doesn't exist in actual git but it's useful for inspecting our index
 
   Default value: `false`
+
+
+
+## `bit check-ignore`
+
+**Usage:** `bit check-ignore <PATH>`
+
+###### **Arguments:**
+
+* `<PATH>`
 
 
 
