@@ -35,6 +35,8 @@ This document contains the help content for the `bit` command-line program.
 * [`bit rev-parse`↴](#bit-rev-parse)
 * [`bit ls-files`↴](#bit-ls-files)
 * [`bit check-ignore`↴](#bit-check-ignore)
+* [`bit rm`↴](#bit-rm)
+* [`bit add`↴](#bit-add)
 
 ## `bit`
 
@@ -53,6 +55,8 @@ This document contains the help content for the `bit` command-line program.
 * `rev-parse` — 
 * `ls-files` — 
 * `check-ignore` — 
+* `rm` — 
+* `add` — 
 
 
 
@@ -175,6 +179,26 @@ This document contains the help content for the `bit` command-line program.
 ###### **Arguments:**
 
 * `<PATH>`
+
+
+
+## `bit rm`
+
+**Usage:** `bit rm [PATHS]...`
+
+###### **Arguments:**
+
+* `<PATHS>`
+
+
+
+## `bit add`
+
+**Usage:** `bit add [PATHS]...`
+
+###### **Arguments:**
+
+* `<PATHS>`
 
 
 
