@@ -125,6 +125,13 @@ impl Index {
 
         Ok(buf)
     }
+
+    pub fn write_to_disk(&self) -> anyhow::Result<()> {
+        fs::write(repo_root()?.join(".bit/index"), self.serialize()?)
+            .context("Failed to write new index to disk")?;
+
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -161,9 +168,9 @@ struct IndexReader {
 impl IndexReader {
     fn new(path: &Path) -> anyhow::Result<Self> {
         Ok(Self {
-            reader: BufReader::new(
-                fs::File::open(path).with_context(|| format!("Unable to open index file '{}'", path.to_string_lossy()))?,
-            ),
+            reader: BufReader::new(fs::File::open(path).with_context(|| {
+                format!("Unable to open index file '{}'", path.to_string_lossy())
+            })?),
             buf: [0u8; 4],
         })
     }
