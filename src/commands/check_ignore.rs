@@ -5,11 +5,11 @@ use clap::Args;
 use crate::objects::Ignore;
 
 #[derive(Args, Debug)]
-pub struct CheckIgnoreArgs {
+pub struct CheckIgnoreArg {
     pub path: String,
 }
 
-impl CheckIgnoreArgs {
+impl CheckIgnoreArg {
     pub fn run(self) -> anyhow::Result<()> {
         let bitignore = Ignore::build_from_disk()?;
 

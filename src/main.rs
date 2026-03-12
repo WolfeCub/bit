@@ -5,7 +5,7 @@ mod util;
 
 mod commands;
 use commands::cat_file::CatFileArg;
-use commands::check_ignore::CheckIgnoreArgs;
+use commands::check_ignore::CheckIgnoreArg;
 use commands::hash_object::HashObjectArg;
 use commands::init::InitArg;
 use commands::log::LogArg;
@@ -16,11 +16,17 @@ use commands::show_ref::ShowRefArg;
 use commands::tag::TagArg;
 use commands::write_tree::WriteTreeArg;
 
+use crate::commands::remove::RemoveArg;
+use crate::commands::testing::TestArg;
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 enum Args {
     #[command(hide = true)]
     MarkdownExport,
+    #[command(hide = true)]
+    Test(TestArg),
+
     Init(InitArg),
     CatFile(CatFileArg),
     HashObject(HashObjectArg),
@@ -31,7 +37,8 @@ enum Args {
     Tag(TagArg),
     RevParse(RevParseArg),
     LsFiles(LsFilesArg),
-    CheckIgnore(CheckIgnoreArgs),
+    CheckIgnore(CheckIgnoreArg),
+    Rm(RemoveArg),
 }
 
 fn main() {
@@ -42,6 +49,8 @@ fn main() {
             clap_markdown::print_help_markdown::<Args>();
             Ok(())
         }
+        Args::Test(a) => a.run(),
+
         Args::Init(a) => a.run(),
         Args::CatFile(a) => a.run(),
         Args::HashObject(a) => a.run(),
@@ -53,6 +62,7 @@ fn main() {
         Args::RevParse(a) => a.run(),
         Args::LsFiles(a) => a.run(),
         Args::CheckIgnore(a) => a.run(),
+        Args::Rm(a) => a.run(),
     };
 
     if let Err(e) = result {

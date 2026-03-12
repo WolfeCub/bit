@@ -1,9 +1,10 @@
+use anyhow::{Context, anyhow};
 use std::{
     fs,
     io::{self, BufReader, Read, Seek},
+    mem,
     path::Path,
 };
-use anyhow::anyhow;
 
 use crate::util::repo_root;
 
@@ -12,7 +13,12 @@ pub struct Index {
     pub entries: Vec<IndexEntry>,
 }
 
+// TODO: We currently don't support extensions which are technically valid in version 2
 impl Index {
+    pub fn from_entries(entries: Vec<IndexEntry>) -> Self {
+        Self { entries }
+    }
+
     pub fn parse_from_disk() -> anyhow::Result<Self> {
         let path = repo_root()?.join(".bit/index");
 
@@ -24,7 +30,9 @@ impl Index {
 
         let version = reader.read_4_bytes()?;
         if version != [0, 0, 0, 2] {
-            return Err(anyhow!("Invalid index: Unsupported index version: {version:?}"));
+            return Err(anyhow!(
+                "Invalid index: Unsupported index version: {version:?}"
+            ));
         }
 
         let num_entries = reader.read_u32()?;
@@ -82,6 +90,41 @@ impl Index {
 
         Ok(Index { entries })
     }
+
+    pub fn serialize(&self) -> anyhow::Result<Vec<u8>> {
+        // 30 is a super rough estimate of a filename length
+        // e.g. src/module/submodule/file.rs is 28 bytes
+        let capacity = (mem::size_of::<IndexEntry>() + 30) * self.entries.len();
+        let mut buf = Vec::<u8>::with_capacity(capacity);
+
+        buf.extend_from_slice(b"DIRC");
+        buf.extend_from_slice(&[0, 0, 0, 2]);
+        buf.extend_from_slice(&(self.entries.len() as u32).to_be_bytes());
+
+        for entry in self.entries.iter() {
+            let start_pos = buf.len();
+            buf.extend_from_slice(&entry.ctime.s.to_be_bytes());
+            buf.extend_from_slice(&entry.ctime.ns.to_be_bytes());
+            buf.extend_from_slice(&entry.mtime.s.to_be_bytes());
+            buf.extend_from_slice(&entry.mtime.ns.to_be_bytes());
+            buf.extend_from_slice(&entry.dev.to_be_bytes());
+            buf.extend_from_slice(&entry.ino.to_be_bytes());
+            buf.extend_from_slice(&entry.mode.to_be_bytes());
+            buf.extend_from_slice(&entry.uid.to_be_bytes());
+            buf.extend_from_slice(&entry.gid.to_be_bytes());
+            buf.extend_from_slice(&entry.size.to_be_bytes());
+            buf.extend_from_slice(&entry.sha);
+            buf.extend_from_slice(&entry.flags.to_be_bytes());
+            buf.extend_from_slice(entry.name.as_bytes());
+            buf.extend_from_slice(b"\0");
+
+            let padding = (8 - ((buf.len() - start_pos) % 8)) % 8;
+
+            buf.extend(std::iter::repeat(0).take(padding));
+        }
+
+        Ok(buf)
+    }
 }
 
 #[derive(Debug)]
@@ -116,9 +159,11 @@ struct IndexReader {
 }
 
 impl IndexReader {
-    fn new(path: &Path) -> io::Result<Self> {
+    fn new(path: &Path) -> anyhow::Result<Self> {
         Ok(Self {
-            reader: BufReader::new(fs::File::open(path)?),
+            reader: BufReader::new(
+                fs::File::open(path).with_context(|| format!("Unable to open index file '{}'", path.to_string_lossy()))?,
+            ),
             buf: [0u8; 4],
         })
     }

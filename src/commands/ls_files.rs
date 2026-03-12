@@ -14,6 +14,7 @@ pub struct LsFilesArg {
     pub verbose: bool,
 }
 
+// TODO: Actual version will print the paths relative to cwd
 impl LsFilesArg {
     pub fn run(self) -> anyhow::Result<()> {
         let index = Index::parse_from_disk()?;
