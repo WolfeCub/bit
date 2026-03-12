@@ -223,7 +223,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_simple() {
+    fn parse_simple() {
         let pattern = Pattern::parse("*.log").unwrap();
         assert_eq!(pattern.tokens.len(), 2);
         let expected = vec![Token::AnyFile, Token::Literal(".log".to_string())];
@@ -234,7 +234,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_anchored() {
+    fn parse_anchored() {
         let pattern = Pattern::parse("foo/bar/it").unwrap();
         assert_eq!(pattern.tokens.len(), 5);
         let expected = vec![
@@ -251,7 +251,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_negated() {
+    fn parse_negated() {
         let pattern = Pattern::parse("!blah").unwrap();
         assert_eq!(pattern.tokens.len(), 1);
         let expected = vec![Token::Literal("blah".to_string())];
@@ -262,7 +262,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_dir_only() {
+    fn parse_dir_only() {
         let pattern = Pattern::parse("blah/").unwrap();
         assert_eq!(pattern.tokens.len(), 1);
         let expected = vec![Token::Literal("blah".to_string())];
@@ -273,7 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_anchored_negated_dir_only() {
+    fn parse_anchored_negated_dir_only() {
         let pattern = Pattern::parse("!foo/bar/").unwrap();
         assert_eq!(pattern.tokens.len(), 3);
         let expected = vec![
@@ -288,7 +288,7 @@ mod tests {
     }
 
     #[test]
-    fn test_recursive_glob() {
+    fn recursive_glob() {
         let pattern = Pattern::parse("**/foo").unwrap();
         assert_eq!(pattern.tokens.len(), 3);
         let expected = vec![
@@ -303,7 +303,7 @@ mod tests {
     }
 
     #[test]
-    fn test_char_class() {
+    fn char_class() {
         let pattern = Pattern::parse("file[0-9].txt").unwrap();
         assert_eq!(pattern.tokens.len(), 3);
         let expected = vec![
@@ -321,7 +321,7 @@ mod tests {
     }
 
     #[test]
-    fn test_negated_char_class() {
+    fn negated_char_class() {
         let pattern = Pattern::parse("file[!0-9].txt").unwrap();
         assert_eq!(pattern.tokens.len(), 3);
         let expected = vec![
@@ -339,14 +339,14 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_empty_and_comment() {
+    fn parse_empty_and_comment() {
         assert!(Pattern::parse("").is_none());
         assert!(Pattern::parse("   ").is_none());
         assert!(Pattern::parse("# This is a comment").is_none());
     }
 
     #[test]
-    fn test_parse_combination() {
+    fn parse_combination() {
         let pattern = Pattern::parse("!foo/bar/**/file[0-9]-blah*.log").unwrap();
         assert_eq!(pattern.tokens.len(), 11);
         let expected = vec![
@@ -372,7 +372,7 @@ mod tests {
     }
 
     #[test]
-    fn test_match_simple_asterisk() {
+    fn match_simple_asterisk() {
         let pattern = Pattern::parse("*.log").unwrap();
         assert!(pattern.matches("error.log", false));
         assert!(!pattern.matches("error.txt", false));
@@ -380,14 +380,14 @@ mod tests {
     }
 
     #[test]
-    fn test_match_anchored() {
+    fn match_anchored() {
         let pattern = Pattern::parse("/target").unwrap();
         assert!(pattern.matches("target", true));
         assert!(!pattern.matches("foo/target", true));
     }
 
     #[test]
-    fn test_dir_wildcard() {
+    fn dir_wildcard() {
         let pattern = Pattern::parse("foo/*/bar").unwrap();
         assert!(pattern.matches("foo/baz/bar", false));
         assert!(pattern.matches("foo/test/bar", false));
@@ -396,7 +396,7 @@ mod tests {
     }
 
     #[test]
-    fn test_recursive_wildcard() {
+    fn recursive_wildcard() {
         let pattern = Pattern::parse("foo/**/bar").unwrap();
         assert!(pattern.matches("foo/baz/bar", false));
         assert!(pattern.matches("foo/test/bar", false));
@@ -407,7 +407,16 @@ mod tests {
     }
 
     #[test]
-    fn test_ignore_matches() {
+    fn single_char_wildcard() {
+        let pattern = Pattern::parse("file?.txt").unwrap();
+        assert!(pattern.matches("file1.txt", false));
+        assert!(pattern.matches("fileA.txt", false));
+        assert!(!pattern.matches("file12.txt", false));
+        assert!(!pattern.matches("file.txt", false));
+    }
+
+    #[test]
+    fn ignore_matches() {
         let ignore = Ignore {
             patterns: ["*.log", "!important.log"]
                 .iter()
