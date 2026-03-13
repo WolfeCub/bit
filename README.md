@@ -1,5 +1,7 @@
 # bit (baby git)
 
+> Just a bit of git
+
 A toy git implementation in rust. This is a work in progress and commands are being added one by one.
 For a full breakdown of implemented commands and features see the [generated cli documentation](#cli-documentation).
 
