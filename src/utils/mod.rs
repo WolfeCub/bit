@@ -3,7 +3,7 @@ pub use bit_dir_walker::*;
 
 use std::{
     env, fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     process::Command,
 };
 
@@ -159,4 +159,29 @@ pub fn make_root_relative(path: impl AsRef<Path>) -> anyhow::Result<String> {
         .with_context(|| format!("Path {absolute_path:?} is not within the repository"))?;
 
     Ok(repo_relative_path.to_string_lossy().into())
+}
+
+pub fn relative_path(target: &std::path::Path, base: &std::path::Path) -> PathBuf {
+    let mut target_components = target.components().peekable();
+    let mut base_components = base.components().peekable();
+
+    // Strip common prefix
+    while target_components.peek() == base_components.peek() {
+        target_components.next();
+        base_components.next();
+    }
+
+    // For each remaining base component, add a ".."
+    let mut result = PathBuf::new();
+    for _ in base_components {
+        result.push(Component::ParentDir);
+    }
+    for c in target_components {
+        result.push(c);
+    }
+    result
+}
+
+pub fn relative_path_string(target: &std::path::Path, base: &std::path::Path) -> String {
+    relative_path(target, base).to_string_lossy().to_string()
 }

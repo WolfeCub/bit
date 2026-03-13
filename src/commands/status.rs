@@ -1,15 +1,16 @@
 use std::{collections::HashMap, env, fs, os::unix::fs::MetadataExt};
 
 use clap::Args;
+use colored::Colorize;
 
 use crate::{
-    commands::hash_object::{hash_object_from_disk, hash_object_hex_from_disk},
+    commands::hash_object::hash_object_from_disk,
     objects::{
         Commit, Ignore, Index, Object,
         ObjectType::{self},
         Tree,
     },
-    utils::{BitDirWalker, find_hash, make_root_relative, repo_root},
+    utils::{BitDirWalker, find_hash, relative_path_string, repo_root},
 };
 
 #[derive(Args, Debug)]
@@ -38,22 +39,69 @@ impl StatusArg {
 
         let ignore = Ignore::build_from_disk()?;
         let index = Index::parse_from_disk()?;
+        let cwd = env::current_dir()?;
 
-        println!("Changes to be committed:");
-
+        println!("\nChanges to be committed:");
+        // Compare HEAD hashes to the index to see what's modified
         for entry in index.entries.iter() {
+            let relative = relative_path_string(&root.join(&entry.name), &cwd);
+
             if let Some(tree_hash) = flattened.get(&entry.name) {
-                if *tree_hash != hash {
-                    println!("  modified: {}", &entry.name);
+                if *tree_hash != hex::encode(entry.sha) {
+                    println!("{}", format!("        modified:   {}", &relative).green());
                 }
             } else {
-                println!("  added: {}", &entry.name);
+                println!("{}", format!("        new file:   {}", &relative).green());
             }
         }
 
+        println!("\nChanges not staged for commit:");
+        let mut files = BitDirWalker::new(&root, ignore)?
+            .map(|entry| -> anyhow::Result<(String, fs::Metadata)> {
+                let path = entry.path();
+                Ok((
+                    path.strip_prefix(&root)?.to_string_lossy().into(),
+                    entry.metadata()?,
+                ))
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
 
-        let files = BitDirWalker::new(&root, ignore)?.collect::<Vec<_>>();
+        for entry in index.entries.iter() {
+            let relative = relative_path_string(&root.join(&entry.name), &cwd);
 
+            if !root.join(&entry.name).exists() {
+                println!("{}", format!("        deleted:    {}", &relative).red());
+                continue;
+            }
+
+            let Some((_, meta)) = files
+                .iter()
+                .position(|(path, _)| path == &entry.name)
+                .map(|i| files.remove(i))
+            else {
+                continue;
+            };
+
+            let ctime_equal = meta.ctime() == i64::from(entry.ctime.s)
+                && meta.ctime_nsec() == i64::from(entry.ctime.ns);
+            let mtime_equal = meta.mtime() == i64::from(entry.mtime.s)
+                && meta.mtime_nsec() == i64::from(entry.mtime.ns);
+
+            if !ctime_equal || !mtime_equal {
+                let path = root.join(&entry.name);
+                let hash = hash_object_from_disk(path, ObjectType::Blob, false)?;
+
+                if hash != entry.sha {
+                    println!("{}", format!("        modified:   {}", &relative).red());
+                }
+            }
+        }
+
+        println!("\nUntracked files:");
+        for (path, _) in files {
+            let relative = relative_path_string(&root.join(&path), &cwd);
+            println!("        {}", relative.red());
+        }
 
         Ok(())
     }
