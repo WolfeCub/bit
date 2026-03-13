@@ -1,6 +1,6 @@
 use chrono::{DateTime, FixedOffset};
 
-use crate::{objects::GitObject, util::parse_line};
+use crate::{objects::GitObject, utils::parse_line};
 
 use anyhow::anyhow;
 

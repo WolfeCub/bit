@@ -4,9 +4,9 @@ use clap::Args;
 use itertools::Itertools;
 
 use crate::{
-    commands::hash_object::{hash_object_hex, hash_object_from_disk},
+    commands::hash_object::{hash_object_hex, hash_object_hex_from_disk},
     objects::{Ignore, ObjectType, Tree, TreeEntry},
-    util::repo_root,
+    utils::repo_root,
 };
 
 #[derive(Args, Debug)]
@@ -51,10 +51,6 @@ fn write_tree(dir: &str) -> anyhow::Result<String> {
                 return None;
             };
 
-            if file_name == ".bit" || file_name == ".git" {
-                return None;
-            }
-
             let full_path = repo_relative.join(&file_name);
             if bitignore.is_file_ignored(&full_path.to_string_lossy(), file_type.is_dir()) {
                 return None;
@@ -86,7 +82,7 @@ fn write_tree(dir: &str) -> anyhow::Result<String> {
                     // TODO: Recursion slow?
                     write_tree(&path)?
                 } else {
-                    hash_object_from_disk(&path, type_, true)?
+                    hash_object_hex_from_disk(&path, type_, true)?
                 };
 
                 Ok(TreeEntry {

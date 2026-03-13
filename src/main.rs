@@ -1,7 +1,7 @@
 use clap::Parser;
 
 mod objects;
-mod util;
+mod utils;
 
 mod commands;
 use commands::cat_file::CatFileArg;
@@ -18,6 +18,7 @@ use commands::write_tree::WriteTreeArg;
 
 use crate::commands::add::AddArg;
 use crate::commands::remove::RemoveArg;
+use crate::commands::status::StatusArg;
 use crate::commands::testing::TestArg;
 
 #[derive(Parser, Debug)]
@@ -41,6 +42,7 @@ enum Args {
     CheckIgnore(CheckIgnoreArg),
     Rm(RemoveArg),
     Add(AddArg),
+    Status(StatusArg),
 }
 
 fn main() {
@@ -66,6 +68,7 @@ fn main() {
         Args::CheckIgnore(a) => a.run(),
         Args::Rm(a) => a.run(),
         Args::Add(a) => a.run(),
+        Args::Status(a) => a.run(),
     };
 
     if let Err(e) = result {

@@ -1,6 +1,9 @@
+mod bit_dir_walker;
+pub use bit_dir_walker::*;
+
 use std::{
     env, fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     process::Command,
 };
 
@@ -146,19 +149,39 @@ pub fn find_hash(target: &str) -> anyhow::Result<String> {
         .context("Unable to resolve or ambiguous hash or ref")
 }
 
-pub fn normalize_paths(paths: &[String]) -> anyhow::Result<Vec<String>> {
+/// Converts a path to be relative to the repo root. Paths must be within the repo.
+pub fn make_root_relative(path: impl AsRef<Path>) -> anyhow::Result<String> {
     let root = repo_root()?;
 
-    let cwd = env::current_dir()?;
-    paths
-        .iter()
-        .map(|path| -> anyhow::Result<String> {
-            let absolute_path = cwd.join(path).canonicalize()?;
-            let repo_relative_path = absolute_path
-                .strip_prefix(&root)
-                .with_context(|| format!("Path {absolute_path:?} is not within the repository"))?;
+    let absolute_path = path.as_ref().canonicalize()?;
+    let repo_relative_path = absolute_path
+        .strip_prefix(&root)
+        .with_context(|| format!("Path {absolute_path:?} is not within the repository"))?;
 
-            Ok(repo_relative_path.to_string_lossy().into())
-        })
-        .collect::<anyhow::Result<Vec<String>>>()
+    Ok(repo_relative_path.to_string_lossy().into())
+}
+
+pub fn relative_path(target: &std::path::Path, base: &std::path::Path) -> PathBuf {
+    let mut target_components = target.components().peekable();
+    let mut base_components = base.components().peekable();
+
+    // Strip common prefix
+    while target_components.peek() == base_components.peek() {
+        target_components.next();
+        base_components.next();
+    }
+
+    // For each remaining base component, add a ".."
+    let mut result = PathBuf::new();
+    for _ in base_components {
+        result.push(Component::ParentDir);
+    }
+    for c in target_components {
+        result.push(c);
+    }
+    result
+}
+
+pub fn relative_path_string(target: &std::path::Path, base: &std::path::Path) -> String {
+    relative_path(target, base).to_string_lossy().to_string()
 }

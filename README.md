@@ -37,6 +37,7 @@ This document contains the help content for the `bit` command-line program.
 * [`bit check-ignore`↴](#bit-check-ignore)
 * [`bit rm`↴](#bit-rm)
 * [`bit add`↴](#bit-add)
+* [`bit status`↴](#bit-status)
 
 ## `bit`
 
@@ -57,6 +58,7 @@ This document contains the help content for the `bit` command-line program.
 * `check-ignore` — 
 * `rm` — 
 * `add` — 
+* `status` — 
 
 
 
@@ -199,6 +201,12 @@ This document contains the help content for the `bit` command-line program.
 ###### **Arguments:**
 
 * `<PATHS>`
+
+
+
+## `bit status`
+
+**Usage:** `bit status`
 
 
 

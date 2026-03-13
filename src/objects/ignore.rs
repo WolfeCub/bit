@@ -2,7 +2,7 @@ use std::fs;
 
 use itertools::Itertools;
 
-use crate::util::repo_root;
+use crate::utils::repo_root;
 
 pub struct Ignore {
     patterns: Vec<Pattern>,
@@ -22,6 +22,10 @@ impl Ignore {
     }
 
     pub fn is_file_ignored(&self, path: &str, is_dir: bool) -> bool {
+        if path == ".bit" || path.starts_with(".bit/") {
+            return true;
+        }
+
         let mut ignored = false;
 
         for pattern in &self.patterns {

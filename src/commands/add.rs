@@ -9,8 +9,7 @@ use clap::Args;
 
 use crate::{
     commands::{hash_object::hash_object, remove},
-    objects::{IndexEntry, ObjectType, TimePair},
-    util::normalize_paths,
+    objects::{IndexEntry, ObjectType, TimePair}, utils::make_root_relative,
 };
 
 #[derive(Args, Debug)]
@@ -24,7 +23,7 @@ impl AddArg {
 
         // TODO: Remove already does this. We're duplicating work here.
         // we can maybe annotate it with #[cached] or pass around the normalized_paths
-        let normalized_paths = normalize_paths(&self.paths)?;
+        let normalized_paths = self.paths.iter().map(make_root_relative).collect::<anyhow::Result<Vec<_>>>()?;
 
         for (path, normalized) in self.paths.into_iter().zip(normalized_paths.into_iter()) {
             let mut file =

@@ -16,6 +16,8 @@ impl InitArg {
         let path = format!("{}/.bit", self.path.unwrap_or_else(|| ".".to_string()));
         fs::create_dir(&path)?;
 
+        fs::write(format!("{path}/HEAD"), "ref: refs/heads/master")?;
+
         let absolute = path::absolute(path)?;
         println!("Initialized empty Git repository in {}", absolute.display());
 
