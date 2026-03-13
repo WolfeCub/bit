@@ -3,10 +3,7 @@ use std::fs;
 use anyhow::Context;
 use clap::Args;
 
-use crate::{
-    objects::Index,
-    util::normalize_paths,
-};
+use crate::{objects::Index, utils::make_root_relative};
 
 #[derive(Args, Debug)]
 pub struct RemoveArg {
@@ -26,7 +23,10 @@ impl RemoveArg {
 pub fn remove(paths: &[String], delete_file: bool) -> anyhow::Result<Index> {
     let index = Index::parse_from_disk()?;
 
-    let normalized_paths = normalize_paths(paths.as_ref())?;
+    let normalized_paths = paths
+        .iter()
+        .map(make_root_relative)
+        .collect::<anyhow::Result<Vec<_>>>()?;
 
     // TODO: This is inefficient, we should be able to do this in one pass
     let new_entries = index

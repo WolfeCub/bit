@@ -8,7 +8,7 @@ use flate2::bufread::ZlibDecoder;
 use anyhow::anyhow;
 
 use crate::{
-    util::object_path,
+    utils::object_path,
 };
 
 pub trait GitObject: Sized {

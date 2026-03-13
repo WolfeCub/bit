@@ -5,7 +5,7 @@ use clap::Args;
 use crate::{
     commands::{hash_object::hash_object_hex, show_ref::resolve_ref},
     objects::{ObjectType, Tag},
-    util::{editor, get_user_info, git_time, repo_root},
+    utils::{editor, get_user_info, git_time, repo_root},
 };
 
 #[derive(Args, Debug)]

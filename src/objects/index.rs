@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-use crate::util::repo_root;
+use crate::utils::repo_root;
 
 #[derive(Debug)]
 pub struct Index {

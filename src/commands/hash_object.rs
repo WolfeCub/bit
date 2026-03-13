@@ -1,6 +1,6 @@
 use std::{
     fs::{self, OpenOptions},
-    io::Write,
+    io::Write, path::Path,
 };
 
 use clap::Args;
@@ -9,7 +9,7 @@ use sha1::{Digest, Sha1};
 
 use crate::{
     objects::{GitObject, Object, ObjectType},
-    util::object_path,
+    utils::object_path,
 };
 
 #[derive(Args, Debug)]
@@ -25,7 +25,7 @@ pub struct HashObjectArg {
 
 impl HashObjectArg {
     pub fn run(self) -> anyhow::Result<()> {
-        let hash = hash_object_from_disk(&self.path, self.type_, self.write)?;
+        let hash = hash_object_hex_from_disk(&self.path, self.type_, self.write)?;
 
         println!("{}", hash);
 
@@ -70,7 +70,12 @@ pub fn hash_object_hex<T: GitObject>(
     Ok(hex::encode(hash))
 }
 
-pub fn hash_object_from_disk(path: &str, type_: ObjectType, write: bool) -> anyhow::Result<String> {
+pub fn hash_object_hex_from_disk(path: impl AsRef<Path>, type_: ObjectType, write: bool) -> anyhow::Result<String> {
     let content = fs::read(path)?;
     hash_object_hex(type_, content, write)
+}
+
+pub fn hash_object_from_disk(path: impl AsRef<Path>, type_: ObjectType, write: bool) -> anyhow::Result<[u8; 20]> {
+    let content = fs::read(path)?;
+    hash_object(type_, content, write)
 }
