@@ -1,8 +1,6 @@
 use chrono::{DateTime, FixedOffset};
 
-use crate::{objects::GitObject, utils::parse_line};
-
-use anyhow::anyhow;
+use crate::{objects::GitObject, utils::parse_field};
 
 #[derive(Debug)]
 pub struct Commit {
@@ -17,7 +15,7 @@ pub struct Commit {
 impl GitObject for Commit {
     fn serialize_body(&self) -> Vec<u8> {
         format!(
-            "tree {}\n{}author {}\ncommitter {}\n{}{}",
+            "tree {}\n{}author {}\ncommitter {}\n{}\n{}\n",
             self.tree,
             self.parent
                 .as_ref()
@@ -33,24 +31,24 @@ impl GitObject for Commit {
     }
 
     fn parse_body(body: &[u8]) -> anyhow::Result<Self> {
-        let (Some(tree), rest) = parse_line(b"tree ", body) else {
-            return Err(anyhow!("Invalid commit: Missing tree"));
+        let (Some(tree), rest) = parse_field(b"tree ", body) else {
+            anyhow::bail!("Invalid commit: Missing tree");
         };
 
-        let (parent, rest) = parse_line(b"parent ", rest);
+        let (parent, rest) = parse_field(b"parent ", rest);
 
-        let (Some(author), rest) = parse_line(b"author ", rest) else {
-            return Err(anyhow!("Invalid commit: Missing author"));
+        let (Some(author), rest) = parse_field(b"author ", rest) else {
+            anyhow::bail!("Invalid commit: Missing author");
         };
 
-        let (Some(committer), rest) = parse_line(b"committer ", rest) else {
-            return Err(anyhow!("Invalid commit: Missing committer"));
+        let (Some(committer), rest) = parse_field(b"committer ", rest) else {
+            anyhow::bail!("Invalid commit: Missing committer");
         };
 
-        let (gpgsig, rest) = parse_line(b"gpgsig ", rest);
+        let (gpgsig, rest) = parse_field(b"gpgsig ", rest);
 
         let Some(rest) = rest.strip_prefix(b"\n") else {
-            return Err(anyhow!("Invalid commit: Require empty line before body"));
+            anyhow::bail!("Invalid commit: Require empty line before body");
         };
 
         Ok(Self {

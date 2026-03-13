@@ -1,8 +1,9 @@
 use crate::{
-    objects::{GitObject, ObjectType}, utils::parse_line
+    objects::{GitObject, ObjectType},
+    utils::parse_field,
 };
 
-use anyhow::{Context, anyhow};
+use anyhow::Context;
 
 #[derive(Debug)]
 pub struct Tag {
@@ -27,20 +28,20 @@ impl GitObject for Tag {
     }
 
     fn parse_body(body: &[u8]) -> anyhow::Result<Self> {
-        let (Some(object), rest) = parse_line(b"object ", body) else {
-            return Err(anyhow!("Invalid tag: Missing object"));
+        let (Some(object), rest) = parse_field(b"object ", body) else {
+            anyhow::bail!("Invalid tag: Missing object");
         };
 
-        let (Some(type_), rest) = parse_line(b"type ", rest) else {
-            return Err(anyhow!("Invalid tag: Missing type"));
+        let (Some(type_), rest) = parse_field(b"type ", rest) else {
+            anyhow::bail!("Invalid tag: Missing type");
         };
 
-        let (Some(tag), rest) = parse_line(b"tag ", rest) else {
-            return Err(anyhow!("Invalid tag: Missing tag"));
+        let (Some(tag), rest) = parse_field(b"tag ", rest) else {
+            anyhow::bail!("Invalid tag: Missing tag");
         };
 
-        let (Some(tagger), rest) = parse_line(b"tagger ", rest) else {
-            return Err(anyhow!("Invalid tag: Missing tagger"));
+        let (Some(tagger), rest) = parse_field(b"tagger ", rest) else {
+            anyhow::bail!("Invalid tag: Missing tagger");
         };
 
         let rest = rest

@@ -1,4 +1,4 @@
-use anyhow::{Context, anyhow};
+use anyhow::Context;
 use std::{
     fs,
     io::{self, BufReader, Read, Seek},
@@ -25,14 +25,12 @@ impl Index {
         let mut reader = IndexReader::new(&path)?;
 
         if reader.read_4_bytes()? != b"DIRC" {
-            return Err(anyhow!("Missing DIRC header"));
+            anyhow::bail!("Missing DIRC header");
         }
 
         let version = reader.read_4_bytes()?;
         if version != [0, 0, 0, 2] {
-            return Err(anyhow!(
-                "Invalid index: Unsupported index version: {version:?}"
-            ));
+            anyhow::bail!("Invalid index: Unsupported index version: {version:?}");
         }
 
         let num_entries = reader.read_u32()?;

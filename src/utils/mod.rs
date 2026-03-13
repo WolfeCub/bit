@@ -24,9 +24,7 @@ pub fn repo_root() -> anyhow::Result<PathBuf> {
         if let Some(next) = cwd.parent() {
             cwd = next.to_path_buf();
         } else {
-            return Err(anyhow!(
-                "Not a bit repository (or any of the parent directories)"
-            ));
+            anyhow::bail!("Not a bit repository (or any of the parent directories)");
         }
     }
 }
@@ -38,18 +36,20 @@ pub fn object_path(hash: &str) -> anyhow::Result<PathBuf> {
         .join(&hash[2..]))
 }
 
-pub fn parse_line<'a>(prefix: &[u8], body: &'a [u8]) -> (Option<String>, &'a [u8]) {
+pub fn parse_field<'a>(prefix: &[u8], body: &'a [u8]) -> (Option<String>, &'a [u8]) {
     let Some(rest) = body.strip_prefix(prefix) else {
         return (None, body);
     };
 
-    let Some(eol) = rest.iter().position(|c| *c == b'\n') else {
-        return (None, body);
-    };
+    let n: usize = rest
+        .split(|c| *c == b'\n')
+        .enumerate()
+        .take_while(|(i, line)| *i == 0 || matches!(line.first(), Some(b' ' | b'\t')))
+        .map(|(_, l)| l.len() + 1)
+        .sum();
 
-    let p = String::from_utf8(rest[..eol].to_vec()).ok();
-
-    (p, &rest[eol + 1..])
+    let field = String::from_utf8(rest[..n].trim_ascii_end().to_vec()).ok();
+    (field, &rest[n..])
 }
 
 pub fn git_time() -> String {
@@ -184,4 +184,32 @@ pub fn relative_path(target: &std::path::Path, base: &std::path::Path) -> PathBu
 
 pub fn relative_path_string(target: &std::path::Path, base: &std::path::Path) -> String {
     relative_path(target, base).to_string_lossy().to_string()
+}
+
+#[derive(Debug)]
+pub struct HeadState {
+    pub name: String,
+    pub hash: String,
+    pub detached: bool,
+}
+
+pub fn head_state() -> anyhow::Result<HeadState> {
+    let root = repo_root()?;
+    let head_content = fs::read_to_string(root.join(".bit/HEAD"))?;
+    let head = head_content.trim();
+
+    let (ref_target, name, detached) = if let Some(refs_path) = head.strip_prefix("ref: ") {
+        let branch = refs_path.strip_prefix("refs/heads/").unwrap_or(refs_path);
+        (refs_path, branch.to_string(), false)
+    } else {
+        (head, head.to_string(), true)
+    };
+
+    let hash = find_hash(ref_target)?;
+
+    Ok(HeadState {
+        name,
+        hash,
+        detached,
+    })
 }

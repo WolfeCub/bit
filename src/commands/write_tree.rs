@@ -20,11 +20,11 @@ impl WriteTreeArg {
     }
 }
 
-fn write_tree(dir: &str) -> anyhow::Result<String> {
-    let read_dir = fs::read_dir(dir)?;
+pub fn write_tree(dir: impl AsRef<Path>) -> anyhow::Result<String> {
+    let read_dir = fs::read_dir(&dir)?;
 
     let root = repo_root()?.canonicalize()?;
-    let canonical_dir = Path::new(dir).canonicalize()?;
+    let canonical_dir = dir.as_ref().canonicalize()?;
     let repo_relative = canonical_dir.strip_prefix(&root)?;
 
     let bitignore = Ignore::build_from_disk()?;
@@ -72,7 +72,8 @@ fn write_tree(dir: &str) -> anyhow::Result<String> {
                     ObjectType::Blob
                 };
 
-                let path = Path::new(dir)
+                let path = dir
+                    .as_ref()
                     .join(&file_name)
                     .to_str()
                     .expect("Dir and file name should be valid UTF-8")

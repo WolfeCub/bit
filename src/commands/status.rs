@@ -10,31 +10,26 @@ use crate::{
         ObjectType::{self},
         Tree,
     },
-    utils::{BitDirWalker, find_hash, relative_path_string, repo_root},
+    utils::{BitDirWalker, head_state, relative_path_string, repo_root},
 };
 
 #[derive(Args, Debug)]
 pub struct StatusArg {}
 
 // TODO: Just overall this needs to be cleaned up
+// TODO: Supporting renames would be cool
 impl StatusArg {
     pub fn run(self) -> anyhow::Result<()> {
         let root = repo_root()?;
-        let head_content = fs::read_to_string(root.join(".bit/HEAD"))?;
-        let (head, attached) = head_content
-            .trim()
-            .strip_prefix("ref: refs/heads/")
-            .map_or((head_content.as_ref(), false), |s| (s, true));
+        let head_state = head_state()?;
 
-        if attached {
-            println!("On branch {head}");
+        if head_state.detached {
+            println!("HEAD detached at {}", head_state.hash);
         } else {
-            println!("HEAD detached at {head}");
+            println!("On branch {}", head_state.name);
         }
 
-        // TODO: Not sure this is correct? We should probably use the refs/heads/ prefix we stripped
-        let hash = find_hash(head)?;
-        let commit = Object::<Commit>::read_from_disk(&hash, ObjectType::Commit)?;
+        let commit = Object::<Commit>::read_from_disk(&head_state.hash, ObjectType::Commit)?;
 
         let flattened = flatten_tree(&commit.inner.tree, "")?;
 

@@ -13,3 +13,4 @@ pub mod check_ignore;
 pub mod remove;
 pub mod add;
 pub mod status;
+pub mod commit;
