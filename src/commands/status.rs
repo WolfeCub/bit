@@ -16,6 +16,7 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct StatusArg {}
 
+// TODO: Just overall this needs to be cleaned up
 impl StatusArg {
     pub fn run(self) -> anyhow::Result<()> {
         let root = repo_root()?;
@@ -43,6 +44,7 @@ impl StatusArg {
 
         println!("\nChanges to be committed:");
         // Compare HEAD hashes to the index to see what's modified
+        // These are our staged changes
         for entry in index.entries.iter() {
             let relative = relative_path_string(&root.join(&entry.name), &cwd);
 
@@ -66,6 +68,8 @@ impl StatusArg {
             })
             .collect::<anyhow::Result<Vec<_>>>()?;
 
+        // Compare the index to the file system to see what's modified or deleted
+        // These are our unstaged changes
         for entry in index.entries.iter() {
             let relative = relative_path_string(&root.join(&entry.name), &cwd);
 
@@ -97,6 +101,7 @@ impl StatusArg {
             }
         }
 
+        // Anything that's left over in the files list is untracked
         println!("\nUntracked files:");
         for (path, _) in files {
             let relative = relative_path_string(&root.join(&path), &cwd);
