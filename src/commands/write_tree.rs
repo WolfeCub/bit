@@ -1,106 +1,118 @@
-use std::{fs, os::unix::fs::PermissionsExt, path::Path};
-
-use clap::Args;
-use itertools::Itertools;
-
-use crate::{
-    commands::hash_object::{hash_object_hex, hash_object_hex_from_disk},
-    objects::{Ignore, ObjectType, Tree, TreeEntry}, utils::repo::repo_root,
+use std::{
+    collections::HashMap,
+    path::Path,
 };
 
+use clap::Args;
+
+use crate::{
+    commands::
+        hash_object::{hash_object_hex, hash_object_hex_from_disk}
+    ,
+    objects::{Index, IndexEntry, ObjectType, Tree, TreeEntry},
+    utils::repo::repo_root,
+};
+
+/// Writes the current index to a tree object and prints it's hash
 #[derive(Args, Debug)]
 pub struct WriteTreeArg {}
 
 impl WriteTreeArg {
     pub fn run(self) -> anyhow::Result<()> {
-        let hash = write_tree(".")?;
+        let hash = write_tree()?;
         println!("{}", hash);
         Ok(())
     }
 }
 
-pub fn write_tree(dir: impl AsRef<Path>) -> anyhow::Result<String> {
-    let read_dir = fs::read_dir(&dir)?;
+/// Writes the current index to a tree object and returns its hash.
+pub fn write_tree() -> anyhow::Result<String> {
+    let index = Index::parse_from_disk()?;
+    let tree = build_tree(&index.entries);
 
-    let root = repo_root()?.canonicalize()?;
-    let canonical_dir = dir.as_ref().canonicalize()?;
-    let repo_relative = canonical_dir.strip_prefix(&root)?;
+    write_tree_rec(&tree, &Path::new(""))
+}
 
-    let bitignore = Ignore::build_from_disk()?;
+fn write_tree_rec(tree: &HashMap<String, TreeNode>, prefix: &Path) -> anyhow::Result<String> {
+    let root = repo_root()?;
 
-    let entries = read_dir
-        .filter_map(|d| {
-            let Ok(d) = d else {
-                eprintln!("Skipping entry that cannot be read: {:?}", d);
-                return None;
-            };
+    let entries = tree
+        .iter()
+        .map(|(name, node)| {
+            match node {
+                TreeNode::File(entry) => {
+                    let hash = hash_object_hex_from_disk(
+                        root.join(&entry.name),
+                        ObjectType::Blob,
+                        true,
+                    )?;
 
-            let Some(file_name) = d.file_name().to_str().map(|s| s.to_owned()) else {
-                eprintln!("Skipping file with non-UTF-8 name: {:?}", d.file_name());
-                return None;
-            };
+                    Ok(TreeEntry {
+                        mode: format!("{:o}", entry.mode),
+                        path: name.clone(),
+                        hash,
+                    })
+                }
 
-            let Ok(file_type) = d.file_type() else {
-                eprintln!("Error reading file type for entry: {:?}", file_name);
-                return None;
-            };
+                TreeNode::Dir(subtree) => {
+                    let hash = write_tree_rec(subtree, &prefix.join(name))?;
 
-            let Ok(metadata) = d.metadata() else {
-                eprintln!("Error reading metadata for entry: {:?}", file_name);
-                return None;
-            };
-
-            let full_path = repo_relative.join(&file_name);
-            if bitignore.is_file_ignored(&full_path.to_string_lossy(), file_type.is_dir()) {
-                return None;
+                    Ok(TreeEntry {
+                        mode: "40000".to_string(),
+                        path: name.clone(),
+                        hash,
+                    })
+                }
             }
-
-            Some((file_name, file_type, metadata.permissions()))
         })
-        .sorted_by_key(|(file_name, file_type, _)| {
-            let trailing = if file_type.is_dir() { "/" } else { "" };
-            format!("{}{}", file_name, trailing)
-        });
-
-    let tree_entries = entries
-        .map(
-            |(file_name, file_type, file_permissions)| -> anyhow::Result<TreeEntry> {
-                let type_ = if file_type.is_dir() {
-                    ObjectType::Tree
-                } else {
-                    ObjectType::Blob
-                };
-
-                let path = dir
-                    .as_ref()
-                    .join(&file_name)
-                    .to_str()
-                    .expect("Dir and file name should be valid UTF-8")
-                    .to_string();
-
-                let hash = if file_type.is_dir() {
-                    // TODO: Recursion slow?
-                    write_tree(&path)?
-                } else {
-                    hash_object_hex_from_disk(&path, type_, true)?
-                };
-
-                Ok(TreeEntry {
-                    mode: format!("{:o}", file_permissions.mode()),
-                    path: file_name,
-                    hash: hash,
-                })
-            },
-        )
         .collect::<anyhow::Result<Vec<_>>>()?;
 
-    let hash = hash_object_hex(
+    hash_object_hex(
         ObjectType::Tree,
-        Tree {
-            entries: tree_entries,
-        },
+        Tree { entries },
         true,
-    )?;
+    )
+}
 
-    Ok(hash)
+
+#[derive(Debug)]
+enum TreeNode {
+    File(IndexEntry),
+    Dir(HashMap<String, TreeNode>),
+}
+
+/// Turns the flat file path list from an index into a nested tree structure.
+fn build_tree(entries: &[IndexEntry]) -> HashMap<String, TreeNode> {
+    /// Recursive helper
+    fn insert(
+        mut map: HashMap<String, TreeNode>,
+        parts: &[&str],
+        entry: &IndexEntry,
+    ) -> HashMap<String, TreeNode> {
+        match parts {
+            [file] => {
+                map.insert(file.to_string(), TreeNode::File(entry.clone()));
+            }
+            [dir, rest @ ..] => {
+                let subtree = match map.remove(*dir) {
+                    Some(TreeNode::Dir(m)) => m,
+                    _ => HashMap::new(),
+                };
+                map.insert(dir.to_string(), TreeNode::Dir(insert(subtree, rest, entry)));
+            }
+            [] => {
+                unreachable!("Empty parts slice")
+            }
+        }
+        map
+    }
+
+    // Split each entry's path into parts and then recurse down
+    entries.iter().fold(HashMap::new(), |map, entry| {
+        insert(
+            map,
+            entry.name.split('/').collect::<Vec<_>>().as_slice(),
+            entry,
+        )
+    })
 }

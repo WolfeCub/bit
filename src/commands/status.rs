@@ -17,6 +17,7 @@ use crate::{
     },
 };
 
+/// Shows the current branch, staged changes, unstaged changes and untracked files
 #[derive(Args, Debug)]
 pub struct StatusArg {}
 

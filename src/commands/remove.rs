@@ -5,6 +5,7 @@ use clap::Args;
 
 use crate::{objects::Index, utils::path::make_root_relative};
 
+/// Remove a file from the index and delete it from the filesystem.
 #[derive(Args, Debug)]
 pub struct RemoveArg {
     pub paths: Vec<String>,

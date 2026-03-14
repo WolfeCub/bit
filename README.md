@@ -40,6 +40,7 @@ This document contains the help content for the `bit` command-line program.
 * [`bit rm`↴](#bit-rm)
 * [`bit add`↴](#bit-add)
 * [`bit status`↴](#bit-status)
+* [`bit commit`↴](#bit-commit)
 
 ## `bit`
 
@@ -47,24 +48,27 @@ This document contains the help content for the `bit` command-line program.
 
 ###### **Subcommands:**
 
-* `init` — 
-* `cat-file` — 
-* `hash-object` — 
-* `log` — 
-* `ls-tree` — 
-* `write-tree` — 
-* `show-ref` — 
-* `tag` — 
-* `rev-parse` — 
-* `ls-files` — 
-* `check-ignore` — 
-* `rm` — 
-* `add` — 
-* `status` — 
+* `init` — Initializes a new bit repository
+* `cat-file` — Displays the contents of a bit object
+* `hash-object` — Creates a bit object from a file on disk, and optionally writes it to the object database
+* `log` — Shows the commit history starting from a given commit (defaulting to HEAD)
+* `ls-tree` — Displays the contents of a tree object
+* `write-tree` — Writes the current index to a tree object and prints it's hash
+* `show-ref` — Prints the hash and name of passed refs or all refs if none were passed
+* `tag` — Creates a new tag or lists existing tags if no name is provided
+* `rev-parse` — Prints the hash of the passed ref or hash
+* `ls-files` — Prints the list of files in the index
+* `check-ignore` — Checks if the passed path is ignored by .bitignore and prints it if it is
+* `rm` — Remove a file from the index and delete it from the filesystem
+* `add` — Adds a file to the index (creating a blob object for it)
+* `status` — Shows the current branch, staged changes, unstaged changes and untracked files
+* `commit` — Creates a new commit with the current index as the tree, and HEAD as the parent
 
 
 
 ## `bit init`
+
+Initializes a new bit repository
 
 **Usage:** `bit init [PATH]`
 
@@ -76,6 +80,8 @@ This document contains the help content for the `bit` command-line program.
 
 ## `bit cat-file`
 
+Displays the contents of a bit object
+
 **Usage:** `bit cat-file <TYPE> <OBJECT>`
 
 ###### **Arguments:**
@@ -86,6 +92,8 @@ This document contains the help content for the `bit` command-line program.
 
 
 ## `bit hash-object`
+
+Creates a bit object from a file on disk, and optionally writes it to the object database
 
 **Usage:** `bit hash-object [OPTIONS] <PATH>`
 
@@ -106,6 +114,8 @@ This document contains the help content for the `bit` command-line program.
 
 ## `bit log`
 
+Shows the commit history starting from a given commit (defaulting to HEAD)
+
 **Usage:** `bit log [COMMIT]`
 
 ###### **Arguments:**
@@ -115,6 +125,8 @@ This document contains the help content for the `bit` command-line program.
 
 
 ## `bit ls-tree`
+
+Displays the contents of a tree object
 
 **Usage:** `bit ls-tree <HASH>`
 
@@ -126,17 +138,23 @@ This document contains the help content for the `bit` command-line program.
 
 ## `bit write-tree`
 
+Writes the current index to a tree object and prints it's hash
+
 **Usage:** `bit write-tree`
 
 
 
 ## `bit show-ref`
 
+Prints the hash and name of passed refs or all refs if none were passed
+
 **Usage:** `bit show-ref`
 
 
 
 ## `bit tag`
+
+Creates a new tag or lists existing tags if no name is provided
 
 **Usage:** `bit tag [OPTIONS] [NAME] [OBJECT]`
 
@@ -147,7 +165,7 @@ This document contains the help content for the `bit` command-line program.
 
 ###### **Options:**
 
-* `-a`
+* `-a` — Create a tag object instead of a lightweight tag. This now also requires a message to be provided
 
   Default value: `false`
 * `-m`, `--message <MESSAGE>`
@@ -155,6 +173,8 @@ This document contains the help content for the `bit` command-line program.
 
 
 ## `bit rev-parse`
+
+Prints the hash of the passed ref or hash
 
 **Usage:** `bit rev-parse [HASH_OR_REF]`
 
@@ -165,6 +185,8 @@ This document contains the help content for the `bit` command-line program.
 
 
 ## `bit ls-files`
+
+Prints the list of files in the index
 
 **Usage:** `bit ls-files [OPTIONS]`
 
@@ -178,6 +200,8 @@ This document contains the help content for the `bit` command-line program.
 
 ## `bit check-ignore`
 
+Checks if the passed path is ignored by .bitignore and prints it if it is
+
 **Usage:** `bit check-ignore <PATH>`
 
 ###### **Arguments:**
@@ -187,6 +211,8 @@ This document contains the help content for the `bit` command-line program.
 
 
 ## `bit rm`
+
+Remove a file from the index and delete it from the filesystem
 
 **Usage:** `bit rm [PATHS]...`
 
@@ -198,6 +224,8 @@ This document contains the help content for the `bit` command-line program.
 
 ## `bit add`
 
+Adds a file to the index (creating a blob object for it)
+
 **Usage:** `bit add [PATHS]...`
 
 ###### **Arguments:**
@@ -208,7 +236,21 @@ This document contains the help content for the `bit` command-line program.
 
 ## `bit status`
 
+Shows the current branch, staged changes, unstaged changes and untracked files
+
 **Usage:** `bit status`
+
+
+
+## `bit commit`
+
+Creates a new commit with the current index as the tree, and HEAD as the parent
+
+**Usage:** `bit commit [OPTIONS]`
+
+###### **Options:**
+
+* `-m`, `--message <MESSAGE>`
 
 
 

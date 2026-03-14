@@ -8,8 +8,11 @@ use clap::Args;
 use crate::utils::repo::repo_root;
 
 
+/// Prints the hash and name of passed refs or all refs if none were passed
 #[derive(Args, Debug)]
-pub struct ShowRefArg {}
+pub struct ShowRefArg {
+    // TODO: Support passing refs as arguments
+}
 
 impl ShowRefArg {
     pub fn run(self) -> anyhow::Result<()> {

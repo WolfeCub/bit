@@ -4,6 +4,7 @@ use clap::Args;
 
 use crate::objects::Ignore;
 
+/// Checks if the passed path is ignored by .bitignore and prints it if it is
 #[derive(Args, Debug)]
 pub struct CheckIgnoreArg {
     pub path: String,

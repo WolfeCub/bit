@@ -3,6 +3,7 @@ use clap::Args;
 use crate::utils::repo::find_hash;
 
 
+/// Prints the hash of the passed ref or hash
 #[derive(Args, Debug)]
 pub struct RevParseArg {
     pub hash_or_ref: Option<String>,

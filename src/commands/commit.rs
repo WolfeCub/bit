@@ -10,6 +10,7 @@ use crate::{
     utils::{config::get_user_info, editor, git_time, repo::{head_state, repo_root}},
 };
 
+/// Creates a new commit with the current index as the tree, and HEAD as the parent
 #[derive(Args, Debug)]
 pub struct CommitArg {
     #[arg(short, long)]
@@ -27,7 +28,7 @@ impl CommitArg {
             anyhow::bail!("Cannot commit in detached HEAD state");
         }
 
-        let new_tree = write_tree(&root)?;
+        let new_tree = write_tree()?;
 
         let (user, email) = get_user_info();
         let author = format!("{} <{}> {}", user, email, git_time());

@@ -4,11 +4,14 @@ use clap::Args;
 
 use crate::{
     commands::{hash_object::hash_object_hex, show_ref::resolve_ref},
-    objects::{ObjectType, Tag}, utils::{config::get_user_info, editor, git_time, repo::repo_root},
+    objects::{ObjectType, Tag},
+    utils::{config::get_user_info, editor, git_time, repo::repo_root},
 };
 
+/// Creates a new tag or lists existing tags if no name is provided
 #[derive(Args, Debug)]
 pub struct TagArg {
+    /// Create a tag object instead of a lightweight tag. This now also requires a message to be provided
     #[arg(short = 'a', default_value_t = false, requires = "name")]
     pub tag_object: bool,
 

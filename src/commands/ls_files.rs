@@ -7,6 +7,7 @@ use std::time::{Duration, UNIX_EPOCH};
 
 use colored::Colorize;
 
+/// Prints the list of files in the index
 #[derive(Args, Debug)]
 pub struct LsFilesArg {
     /// This doesn't exist in actual git but it's useful for inspecting our index
