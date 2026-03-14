@@ -1,5 +1,5 @@
 use crate::{
-    objects::{Index, IndexEntry}, utils::{cwd, relative_path_string, repo_root},
+    objects::{Index, IndexEntry}, utils::{path::relative_path_string, repo::{cwd, repo_root}},
 };
 use chrono::{DateTime, Local};
 use clap::Args;

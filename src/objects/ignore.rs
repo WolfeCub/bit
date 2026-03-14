@@ -2,7 +2,8 @@ use std::fs;
 
 use itertools::Itertools;
 
-use crate::utils::repo_root;
+use crate::utils::repo::repo_root;
+
 
 pub struct Ignore {
     patterns: Vec<Pattern>,

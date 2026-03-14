@@ -3,7 +3,7 @@ use std::fs;
 use anyhow::Context;
 use clap::Args;
 
-use crate::{objects::Index, utils::make_root_relative};
+use crate::{objects::Index, utils::path::make_root_relative};
 
 #[derive(Args, Debug)]
 pub struct RemoveArg {

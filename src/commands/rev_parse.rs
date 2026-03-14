@@ -1,6 +1,7 @@
 use clap::Args;
 
-use crate::utils::find_hash;
+use crate::utils::repo::find_hash;
+
 
 #[derive(Args, Debug)]
 pub struct RevParseArg {

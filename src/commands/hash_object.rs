@@ -8,8 +8,7 @@ use flate2::{Compression, write::ZlibEncoder};
 use sha1::{Digest, Sha1};
 
 use crate::{
-    objects::{GitObject, Object, ObjectType},
-    utils::object_path,
+    objects::{GitObject, Object, ObjectType}, utils::repo::object_path,
 };
 
 #[derive(Args, Debug)]

@@ -9,7 +9,7 @@ use clap::Args;
 
 use crate::{
     commands::{hash_object::hash_object, remove},
-    objects::{IndexEntry, ObjectType, TimePair}, utils::make_root_relative,
+    objects::{IndexEntry, ObjectType, TimePair}, utils::path::make_root_relative,
 };
 
 #[derive(Args, Debug)]
@@ -56,7 +56,7 @@ impl AddArg {
                 gid: metadata.gid(),
                 size: u32::try_from(metadata.size())?,
                 sha: hash,
-                flags: normalized.len().min(0xFFF) as u16, // TODO: We're ignoring the upper set bits for now
+                flags: normalized.len().min(0xFFF) as u16,
                 name: normalized,
             };
 

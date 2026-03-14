@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-use crate::utils::repo_root;
+use crate::utils::repo::repo_root;
 
 #[derive(Debug)]
 pub struct Index {
@@ -142,7 +142,17 @@ pub struct IndexEntry {
     pub dev: u32,
     /// The file's inode number
     pub ino: u32,
-    // TODO:
+    /// Mode (32 bits, upper 16 unused)
+    ///
+    /// ┌──────────────────┬───────────┬──────────┐
+    /// │      15-12       │   11-9    │   8-0    │
+    /// ├──────────────────┼───────────┼──────────┤
+    /// │   object type    │   owner   │  perms   │
+    /// └──────────────────┴───────────┴──────────┘
+    ///
+    /// object type (15-12): 0b1000 = regular file, 0b1010 = symlink, 0b1110 = gitlink
+    /// owner        (11-9): setuid/setgid/sticky (always 0 in practice)
+    /// perms         (8-0): 0o755 or 0o644 for files, 0o000 for symlinks/gitlinks
     pub mode: u32,
     /// User ID of owner
     pub uid: u32,
@@ -152,7 +162,16 @@ pub struct IndexEntry {
     pub size: u32,
     /// The object's SHA
     pub sha: [u8; 20],
-    // TODO:
+    /// ┌─────┬──────────┬───────┬─────────────────────────────┐
+    /// │ 15  │    14    │ 13-12 │            11-0             │
+    /// ├─────┼──────────┼───────┼─────────────────────────────┤
+    /// │ A-V │ extended │ stage │          name len           │
+    /// └─────┴──────────┴───────┴─────────────────────────────┘
+    ///
+    /// assume-valid (15): skip worktree change detection
+    /// extended     (14): if set, a second flags field follows the entry
+    /// stage     (13-12): merge conflict stage (0 = normal, 1-3 = conflict)
+    /// name len   (11-0): filename byte length, capped at 0xFFF
     pub flags: u16,
     pub name: String,
 }

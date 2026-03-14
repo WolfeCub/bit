@@ -7,9 +7,7 @@ use std::{
 use flate2::bufread::ZlibDecoder;
 use anyhow::anyhow;
 
-use crate::{
-    utils::object_path,
-};
+use crate::utils::repo::object_path;
 
 pub trait GitObject: Sized {
     fn serialize_body(&self) -> Vec<u8>;

@@ -5,7 +5,8 @@ use std::{
 
 use clap::Args;
 
-use crate::{utils::repo_root};
+use crate::utils::repo::repo_root;
+
 
 #[derive(Args, Debug)]
 pub struct ShowRefArg {}

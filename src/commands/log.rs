@@ -5,11 +5,11 @@ use colored::Colorize;
 use itertools::Itertools;
 
 use crate::objects::Commit;
-use crate::utils::repo_root;
+use crate::utils::bit_dir_walker::BitDirWalker;
+use crate::utils::repo::repo_root;
 use crate::{
     commands::show_ref::resolve_ref,
     objects::{Ignore, Object, ObjectType},
-    utils::BitDirWalker,
 };
 
 #[derive(Args, Debug)]

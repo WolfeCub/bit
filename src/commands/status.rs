@@ -6,17 +6,20 @@ use colored::Colorize;
 use crate::{
     commands::hash_object::hash_object_from_disk,
     objects::{
-        Commit, Ignore, Index, Object,
+        Commit, Ignore, Index, IndexEntry, Object,
         ObjectType::{self},
         Tree,
     },
-    utils::{BitDirWalker, cwd, head_state, relative_path_string, repo_root},
+    utils::{
+        bit_dir_walker::BitDirWalker,
+        path::relative_path_string,
+        repo::{cwd, head_state, repo_root},
+    },
 };
 
 #[derive(Args, Debug)]
 pub struct StatusArg {}
 
-// TODO: Just overall this needs to be cleaned up
 // TODO: Supporting renames would be cool
 impl StatusArg {
     pub fn run(self) -> anyhow::Result<()> {
@@ -69,12 +72,7 @@ impl StatusArg {
                 continue;
             };
 
-            let ctime_equal = meta.ctime() == i64::from(entry.ctime.s)
-                && meta.ctime_nsec() == i64::from(entry.ctime.ns);
-            let mtime_equal = meta.mtime() == i64::from(entry.mtime.s)
-                && meta.mtime_nsec() == i64::from(entry.mtime.ns);
-
-            if !ctime_equal || !mtime_equal {
+            if file_ts_changed(entry, meta) {
                 let path = root.join(&entry.name);
                 let hash = hash_object_from_disk(path, ObjectType::Blob, false)?;
 
@@ -93,6 +91,15 @@ impl StatusArg {
 
         Ok(())
     }
+}
+
+fn file_ts_changed(entry: &IndexEntry, meta: fs::Metadata) -> bool {
+    let ctime_equal =
+        meta.ctime() == i64::from(entry.ctime.s) && meta.ctime_nsec() == i64::from(entry.ctime.ns);
+    let mtime_equal =
+        meta.mtime() == i64::from(entry.mtime.s) && meta.mtime_nsec() == i64::from(entry.mtime.ns);
+    let files_different = !ctime_equal || !mtime_equal;
+    files_different
 }
 
 pub fn get_changes_to_be_committed(tree_hash: &str, index: &Index) -> anyhow::Result<Vec<String>> {
