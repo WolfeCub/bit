@@ -30,7 +30,7 @@ impl ShowRefArg {
     }
 }
 
-pub fn resolve_ref(reference: &str) -> anyhow::Result<String> {
+pub fn resolve_ref(reference: impl AsRef<Path>) -> anyhow::Result<String> {
     let root = repo_root()?;
     let path = root.join(".bit").join(reference);
 

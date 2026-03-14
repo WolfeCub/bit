@@ -15,7 +15,7 @@ use crate::{commands::show_ref::resolve_ref, objects::Config};
 
 #[cached(result = true)]
 pub fn repo_root() -> anyhow::Result<PathBuf> {
-    let mut cwd = env::current_dir()?;
+    let mut cwd = cwd()?;
     loop {
         if cwd.join(".bit").exists() {
             return Ok(cwd);
@@ -27,6 +27,13 @@ pub fn repo_root() -> anyhow::Result<PathBuf> {
             anyhow::bail!("Not a bit repository (or any of the parent directories)");
         }
     }
+}
+
+/// Thin wrapper around `current_dir` that provides caching so we can reuse
+/// The working directly won't change during any git/bit calls
+#[cached(result = true)]
+pub fn cwd() -> anyhow::Result<PathBuf> {
+    Ok(env::current_dir()?)
 }
 
 pub fn object_path(hash: &str) -> anyhow::Result<PathBuf> {
@@ -78,7 +85,7 @@ where
         .collect::<Vec<_>>();
 
     if filtered.is_empty() {
-        Err(anyhow!("Empty tag message"))
+        Err(anyhow!("Empty message"))
     } else {
         Ok(filtered.join("\n"))
     }
@@ -161,9 +168,9 @@ pub fn make_root_relative(path: impl AsRef<Path>) -> anyhow::Result<String> {
     Ok(repo_relative_path.to_string_lossy().into())
 }
 
-pub fn relative_path(target: &std::path::Path, base: &std::path::Path) -> PathBuf {
-    let mut target_components = target.components().peekable();
-    let mut base_components = base.components().peekable();
+pub fn relative_path(target: impl AsRef<Path>, base: impl AsRef<Path>) -> PathBuf {
+    let mut target_components = target.as_ref().components().peekable();
+    let mut base_components = base.as_ref().components().peekable();
 
     // Strip common prefix
     while target_components.peek() == base_components.peek() {
@@ -182,7 +189,7 @@ pub fn relative_path(target: &std::path::Path, base: &std::path::Path) -> PathBu
     result
 }
 
-pub fn relative_path_string(target: &std::path::Path, base: &std::path::Path) -> String {
+pub fn relative_path_string(target: impl AsRef<Path>, base: impl AsRef<Path>) -> String {
     relative_path(target, base).to_string_lossy().to_string()
 }
 

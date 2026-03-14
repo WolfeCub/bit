@@ -1,5 +1,5 @@
 use crate::{
-    objects::{Index, IndexEntry},
+    objects::{Index, IndexEntry}, utils::{cwd, relative_path_string, repo_root},
 };
 use chrono::{DateTime, Local};
 use clap::Args;
@@ -14,13 +14,15 @@ pub struct LsFilesArg {
     pub verbose: bool,
 }
 
-// TODO: Actual version will print the paths relative to cwd
 impl LsFilesArg {
     pub fn run(self) -> anyhow::Result<()> {
+        let root = repo_root()?;
         let index = Index::parse_from_disk()?;
 
+        let cwd = cwd()?;
         for entry in &index.entries {
-            println!("{}", entry.name);
+            let relative = relative_path_string(root.join(&entry.name), &cwd);
+            println!("{}", relative);
             if self.verbose {
                 print_verbose(entry);
             }

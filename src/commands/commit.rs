@@ -4,10 +4,9 @@ use clap::Args;
 
 use crate::{
     commands::{
-        hash_object::hash_object_hex,
-        write_tree::write_tree,
+        hash_object::hash_object_hex, status::get_changes_to_be_committed, write_tree::write_tree,
     },
-    objects::{Commit, ObjectType},
+    objects::{Commit, Index, Object, ObjectType},
     utils::{editor, get_user_info, git_time, head_state, repo_root},
 };
 
@@ -35,9 +34,13 @@ impl CommitArg {
 
         let message = self.message.map_or_else(
             || {
+                let index = Index::parse_from_disk()?;
+                let commit =
+                    Object::<Commit>::read_from_disk(&head_state.hash, ObjectType::Commit)?;
+                let changes = get_changes_to_be_committed(&commit.inner.tree, &index)?;
                 editor(
                     root.join(".bit/COMMIT_EDITMSG"),
-                    &initial_commit_text(&head_state.name),
+                    &initial_commit_text(&head_state.name, changes),
                 )
             },
             Ok,
@@ -63,7 +66,9 @@ impl CommitArg {
     }
 }
 
-fn initial_commit_text(branch_name: &str) -> String {
+fn initial_commit_text(branch_name: &str, changes: Vec<String>) -> String {
+    let change_lines = changes.join("\n");
+
     format!(
         r"
 # Please enter the commit message for your changes. Lines starting
@@ -72,8 +77,7 @@ fn initial_commit_text(branch_name: &str) -> String {
 # On branch {branch_name}
 #
 # Changes to be committed:
-#   TODO: THIS IS HARDCODED
-#	new file:   src/commands/commit.rs
+#{change_lines}
 #"
     )
 }

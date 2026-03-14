@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, fs, os::unix::fs::MetadataExt};
+use std::{collections::HashMap, fs, os::unix::fs::MetadataExt};
 
 use clap::Args;
 use colored::Colorize;
@@ -10,7 +10,7 @@ use crate::{
         ObjectType::{self},
         Tree,
     },
-    utils::{BitDirWalker, head_state, relative_path_string, repo_root},
+    utils::{BitDirWalker, cwd, head_state, relative_path_string, repo_root},
 };
 
 #[derive(Args, Debug)]
@@ -31,25 +31,13 @@ impl StatusArg {
 
         let commit = Object::<Commit>::read_from_disk(&head_state.hash, ObjectType::Commit)?;
 
-        let flattened = flatten_tree(&commit.inner.tree, "")?;
-
         let ignore = Ignore::build_from_disk()?;
         let index = Index::parse_from_disk()?;
-        let cwd = env::current_dir()?;
 
         println!("\nChanges to be committed:");
-        // Compare HEAD hashes to the index to see what's modified
-        // These are our staged changes
-        for entry in index.entries.iter() {
-            let relative = relative_path_string(&root.join(&entry.name), &cwd);
-
-            if let Some(tree_hash) = flattened.get(&entry.name) {
-                if *tree_hash != hex::encode(entry.sha) {
-                    println!("{}", format!("        modified:   {}", &relative).green());
-                }
-            } else {
-                println!("{}", format!("        new file:   {}", &relative).green());
-            }
+        let changes = get_changes_to_be_committed(&commit.inner.tree, &index)?;
+        for change in changes {
+            println!("{}", change.green());
         }
 
         println!("\nChanges not staged for commit:");
@@ -66,7 +54,7 @@ impl StatusArg {
         // Compare the index to the file system to see what's modified or deleted
         // These are our unstaged changes
         for entry in index.entries.iter() {
-            let relative = relative_path_string(&root.join(&entry.name), &cwd);
+            let relative = relative_path_string(&root.join(&entry.name), cwd()?);
 
             if !root.join(&entry.name).exists() {
                 println!("{}", format!("        deleted:    {}", &relative).red());
@@ -99,12 +87,37 @@ impl StatusArg {
         // Anything that's left over in the files list is untracked
         println!("\nUntracked files:");
         for (path, _) in files {
-            let relative = relative_path_string(&root.join(&path), &cwd);
+            let relative = relative_path_string(&root.join(&path), cwd()?);
             println!("        {}", relative.red());
         }
 
         Ok(())
     }
+}
+
+pub fn get_changes_to_be_committed(tree_hash: &str, index: &Index) -> anyhow::Result<Vec<String>> {
+    let root = repo_root()?;
+    let flattened = flatten_tree(tree_hash, "")?;
+
+    let cwd = cwd()?;
+    Ok(index
+        .entries
+        .iter()
+        .filter_map(|entry| {
+            let relative = relative_path_string(&root.join(&entry.name), &cwd);
+
+            let result = match flattened.get(&entry.name) {
+                None => {
+                    format!("        new file:   {}", &relative)
+                }
+                Some(tree_hash) if *tree_hash != hex::encode(entry.sha) => {
+                    format!("        modified:   {}", &relative)
+                }
+                _ => return None,
+            };
+            Some(result)
+        })
+        .collect())
 }
 
 fn flatten_tree(tree_hash: &str, prefix_dir: &str) -> anyhow::Result<HashMap<String, String>> {
