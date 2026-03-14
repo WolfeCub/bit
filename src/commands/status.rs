@@ -38,13 +38,18 @@ impl StatusArg {
         let ignore = Ignore::build_from_disk()?;
         let index = Index::parse_from_disk()?;
 
-        println!("\nChanges to be committed:");
         let changes = get_changes_to_be_committed_text(&commit.inner.tree, &index)?;
-        for change in changes {
-            println!("{}", change.green());
+        if changes.len() > 0 {
+            println!("\nChanges to be committed:");
+            for change in changes {
+                println!("{}", change.green());
+            }
         }
 
-        println!("\nChanges not staged for commit:");
+        if index.entries.len() > 0 {
+            println!("\nChanges not staged for commit:");
+        }
+
         let mut files = BitDirWalker::new(&root, ignore)?
             .map(|entry| -> anyhow::Result<(String, fs::Metadata)> {
                 let path = entry.path();
@@ -83,8 +88,10 @@ impl StatusArg {
             }
         }
 
+        if files.len() > 0 {
+            println!("\nUntracked files:");
+        }
         // Anything that's left over in the files list is untracked
-        println!("\nUntracked files:");
         for (path, _) in files {
             let relative = relative_path_string(&root.join(&path), cwd()?);
             println!("        {}", relative.red());
@@ -119,36 +126,35 @@ pub fn get_changes_to_be_committed<'a>(
         .iter()
         .filter_map(|entry| {
             let new_file = match flattened.get(&entry.name) {
-                None => {
-                    true
-                }
-                Some(tree_hash) if *tree_hash != hex::encode(entry.sha) => {
-                    false
-                }
+                None => true,
+                Some(tree_hash) if *tree_hash != hex::encode(entry.sha) => false,
                 _ => return None,
             };
-            Some(StagedChange {
-                new_file,
-                entry,
-            })
+            Some(StagedChange { new_file, entry })
         })
         .collect())
 }
 
-pub fn get_changes_to_be_committed_text(tree_hash: &str, index: &Index) -> anyhow::Result<Vec<String>> {
+pub fn get_changes_to_be_committed_text(
+    tree_hash: &str,
+    index: &Index,
+) -> anyhow::Result<Vec<String>> {
     let root = repo_root()?;
     let cwd = cwd()?;
 
-    get_changes_to_be_committed(tree_hash, index)?.into_iter().map(|change| {
-        let relative = relative_path_string(&root.join(&change.entry.name), &cwd);
+    get_changes_to_be_committed(tree_hash, index)?
+        .into_iter()
+        .map(|change| {
+            let relative = relative_path_string(&root.join(&change.entry.name), &cwd);
 
-        let result = if change.new_file {
-            format!("        new file:   {}", &relative)
-        } else {
-            format!("        modified:   {}", &relative)
-        };
-        Ok(result)
-    }).collect()
+            let result = if change.new_file {
+                format!("        new file:   {}", &relative)
+            } else {
+                format!("        modified:   {}", &relative)
+            };
+            Ok(result)
+        })
+        .collect()
 }
 
 fn flatten_tree(tree_hash: &str, prefix_dir: &str) -> anyhow::Result<HashMap<String, String>> {
