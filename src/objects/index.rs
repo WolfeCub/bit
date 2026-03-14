@@ -132,7 +132,7 @@ impl Index {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IndexEntry {
     /// The last time a file's metadata changed
     pub ctime: TimePair,
@@ -227,7 +227,7 @@ impl IndexReader {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TimePair {
     pub s: u32,
     pub ns: u32,

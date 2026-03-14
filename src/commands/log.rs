@@ -12,6 +12,7 @@ use crate::{
     objects::{Ignore, Object, ObjectType},
 };
 
+/// Shows the commit history starting from a given commit (defaulting to HEAD).
 #[derive(Args, Debug)]
 pub struct LogArg {
     pub commit: Option<String>,

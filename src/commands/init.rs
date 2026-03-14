@@ -2,6 +2,7 @@ use std::{fs, path};
 
 use clap::Args;
 
+/// Initializes a new bit repository.
 #[derive(Args, Debug)]
 pub struct InitArg {
     pub path: Option<String>,

@@ -4,6 +4,7 @@ use crate::{
     objects::{Object, ObjectType, Tree},
 };
 
+/// Displays the contents of a tree object
 #[derive(Args, Debug)]
 pub struct LsTreeArg {
     pub hash: String,

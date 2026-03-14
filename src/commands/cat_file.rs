@@ -4,6 +4,7 @@ use crate::{
     objects::{Object, ObjectType},
 };
 
+/// Displays the contents of a bit object
 #[derive(Args, Debug)]
 pub struct CatFileArg {
     pub type_: ObjectType,

@@ -11,6 +11,7 @@ use crate::{
     objects::{GitObject, Object, ObjectType}, utils::repo::object_path,
 };
 
+/// Creates a bit object from a file on disk, and optionally writes it to the object database
 #[derive(Args, Debug)]
 pub struct HashObjectArg {
     #[arg(short, long, default_value_t = ObjectType::Blob)]

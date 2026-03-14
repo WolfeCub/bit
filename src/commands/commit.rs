@@ -4,7 +4,7 @@ use clap::Args;
 
 use crate::{
     commands::{
-        hash_object::hash_object_hex, status::get_changes_to_be_committed, write_tree::write_tree,
+        hash_object::hash_object_hex, status::get_changes_to_be_committed_text, write_tree::write_tree,
     },
     objects::{Commit, Index, Object, ObjectType},
     utils::{config::get_user_info, editor, git_time, repo::{head_state, repo_root}},
@@ -37,7 +37,7 @@ impl CommitArg {
                 let index = Index::parse_from_disk()?;
                 let commit =
                     Object::<Commit>::read_from_disk(&head_state.hash, ObjectType::Commit)?;
-                let changes = get_changes_to_be_committed(&commit.inner.tree, &index)?;
+                let changes = get_changes_to_be_committed_text(&commit.inner.tree, &index)?;
                 editor(
                     root.join(".bit/COMMIT_EDITMSG"),
                     &initial_commit_text(&head_state.name, changes),

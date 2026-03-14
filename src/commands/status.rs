@@ -38,7 +38,7 @@ impl StatusArg {
         let index = Index::parse_from_disk()?;
 
         println!("\nChanges to be committed:");
-        let changes = get_changes_to_be_committed(&commit.inner.tree, &index)?;
+        let changes = get_changes_to_be_committed_text(&commit.inner.tree, &index)?;
         for change in changes {
             println!("{}", change.green());
         }
@@ -102,29 +102,52 @@ fn file_ts_changed(entry: &IndexEntry, meta: fs::Metadata) -> bool {
     files_different
 }
 
-pub fn get_changes_to_be_committed(tree_hash: &str, index: &Index) -> anyhow::Result<Vec<String>> {
-    let root = repo_root()?;
+pub struct StagedChange<'a> {
+    pub new_file: bool,
+    pub entry: &'a IndexEntry,
+}
+
+pub fn get_changes_to_be_committed<'a>(
+    tree_hash: &str,
+    index: &'a Index,
+) -> anyhow::Result<Vec<StagedChange<'a>>> {
     let flattened = flatten_tree(tree_hash, "")?;
 
-    let cwd = cwd()?;
     Ok(index
         .entries
         .iter()
         .filter_map(|entry| {
-            let relative = relative_path_string(&root.join(&entry.name), &cwd);
-
-            let result = match flattened.get(&entry.name) {
+            let new_file = match flattened.get(&entry.name) {
                 None => {
-                    format!("        new file:   {}", &relative)
+                    true
                 }
                 Some(tree_hash) if *tree_hash != hex::encode(entry.sha) => {
-                    format!("        modified:   {}", &relative)
+                    false
                 }
                 _ => return None,
             };
-            Some(result)
+            Some(StagedChange {
+                new_file,
+                entry,
+            })
         })
         .collect())
+}
+
+pub fn get_changes_to_be_committed_text(tree_hash: &str, index: &Index) -> anyhow::Result<Vec<String>> {
+    let root = repo_root()?;
+    let cwd = cwd()?;
+
+    get_changes_to_be_committed(tree_hash, index)?.into_iter().map(|change| {
+        let relative = relative_path_string(&root.join(&change.entry.name), &cwd);
+
+        let result = if change.new_file {
+            format!("        new file:   {}", &relative)
+        } else {
+            format!("        modified:   {}", &relative)
+        };
+        Ok(result)
+    }).collect()
 }
 
 fn flatten_tree(tree_hash: &str, prefix_dir: &str) -> anyhow::Result<HashMap<String, String>> {
