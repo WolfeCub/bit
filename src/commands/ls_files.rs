@@ -22,7 +22,7 @@ impl LsFilesArg {
 
         let cwd = cwd()?;
         for entry in &index.entries {
-            let relative = relative_path_string(root.join(&entry.name), &cwd);
+            let relative = relative_path_string(root.join(&entry.name), &cwd)?;
             println!("{}", relative);
             if self.verbose {
                 print_verbose(entry);

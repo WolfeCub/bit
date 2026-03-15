@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs, os::unix::fs::MetadataExt};
+use std::{fs, os::unix::fs::MetadataExt};
 
 use clap::Args;
 use colored::Colorize;
@@ -8,7 +8,7 @@ use crate::{
     objects::{
         Commit, Ignore, Index, IndexEntry, Object,
         ObjectType::{self},
-        Tree,
+        flatten_tree_from_disk,
     },
     utils::{
         bit_dir_walker::BitDirWalker,
@@ -63,7 +63,7 @@ impl StatusArg {
         // Compare the index to the file system to see what's modified or deleted
         // These are our unstaged changes
         for entry in index.entries.iter() {
-            let relative = relative_path_string(&root.join(&entry.name), cwd()?);
+            let relative = relative_path_string(&root.join(&entry.name), cwd()?)?;
 
             if !root.join(&entry.name).exists() {
                 println!("{}", format!("        deleted:    {}", &relative).red());
@@ -93,7 +93,7 @@ impl StatusArg {
         }
         // Anything that's left over in the files list is untracked
         for (path, _) in files {
-            let relative = relative_path_string(&root.join(&path), cwd()?);
+            let relative = relative_path_string(&root.join(&path), cwd()?)?;
             println!("        {}", relative.red());
         }
 
@@ -110,6 +110,7 @@ fn file_ts_changed(entry: &IndexEntry, meta: fs::Metadata) -> bool {
     files_different
 }
 
+#[derive(Debug)]
 pub struct StagedChange<'a> {
     pub new_file: bool,
     pub entry: &'a IndexEntry,
@@ -119,7 +120,7 @@ pub fn get_changes_to_be_committed<'a>(
     tree_hash: &str,
     index: &'a Index,
 ) -> anyhow::Result<Vec<StagedChange<'a>>> {
-    let flattened = flatten_tree(tree_hash, "")?;
+    let flattened = flatten_tree_from_disk(tree_hash)?;
 
     Ok(index
         .entries
@@ -127,7 +128,7 @@ pub fn get_changes_to_be_committed<'a>(
         .filter_map(|entry| {
             let new_file = match flattened.get(&entry.name) {
                 None => true,
-                Some(tree_hash) if *tree_hash != hex::encode(entry.sha) => false,
+                Some(tree_entry) if *tree_entry.hash != hex::encode(entry.sha) => false,
                 _ => return None,
             };
             Some(StagedChange { new_file, entry })
@@ -142,10 +143,12 @@ pub fn get_changes_to_be_committed_text(
     let root = repo_root()?;
     let cwd = cwd()?;
 
-    get_changes_to_be_committed(tree_hash, index)?
+    let changes = get_changes_to_be_committed(tree_hash, index)?;
+
+    changes
         .into_iter()
         .map(|change| {
-            let relative = relative_path_string(&root.join(&change.entry.name), &cwd);
+            let relative = relative_path_string(&root.join(&change.entry.name), &cwd)?;
 
             let result = if change.new_file {
                 format!("        new file:   {}", &relative)
@@ -155,22 +158,4 @@ pub fn get_changes_to_be_committed_text(
             Ok(result)
         })
         .collect()
-}
-
-fn flatten_tree(tree_hash: &str, prefix_dir: &str) -> anyhow::Result<HashMap<String, String>> {
-    let mut map = HashMap::new();
-    let tree = Object::<Tree>::read_from_disk(tree_hash, ObjectType::Tree)?;
-
-    for entry in tree.inner.entries {
-        let prefixed_path = format!("{prefix_dir}{}", entry.path);
-
-        if entry.get_type()? == "blob" {
-            map.insert(prefixed_path, entry.hash);
-        } else if entry.get_type()? == "tree" {
-            let dir_path = format!("{}/", prefixed_path);
-            map.extend(flatten_tree(&entry.hash, &dir_path)?);
-        }
-    }
-
-    Ok(map)
 }

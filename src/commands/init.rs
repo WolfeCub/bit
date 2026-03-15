@@ -2,6 +2,8 @@ use std::{fs, path};
 
 use clap::Args;
 
+use crate::objects::Index;
+
 /// Initializes a new bit repository.
 #[derive(Args, Debug)]
 pub struct InitArg {
@@ -18,6 +20,9 @@ impl InitArg {
         fs::create_dir(&path)?;
 
         fs::write(format!("{path}/HEAD"), "ref: refs/heads/master")?;
+
+        let index = Index::from_entries(vec![]);
+        index.write_to_disk()?;
 
         let absolute = path::absolute(path)?;
         println!("Initialized empty Git repository in {}", absolute.display());

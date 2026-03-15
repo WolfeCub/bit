@@ -12,7 +12,7 @@ pub struct Ignore {
 impl Ignore {
     pub fn build_from_disk() -> anyhow::Result<Ignore> {
         let root = repo_root()?;
-        let contents = fs::read_to_string(root.join(".bitignore"))?;
+        let contents = fs::read_to_string(root.join(".bitignore")).unwrap_or_default();
 
         let patterns = contents
             .lines()

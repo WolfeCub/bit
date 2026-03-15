@@ -1,8 +1,10 @@
 use anyhow::Context;
 use std::{
+    fmt::Debug,
     fs,
     io::{self, BufReader, Read, Seek},
     mem,
+    os::unix::fs::MetadataExt,
     path::Path,
 };
 
@@ -132,7 +134,7 @@ impl Index {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Default)]
 pub struct IndexEntry {
     /// The last time a file's metadata changed
     pub ctime: TimePair,
@@ -174,6 +176,64 @@ pub struct IndexEntry {
     /// name len   (11-0): filename byte length, capped at 0xFFF
     pub flags: u16,
     pub name: String,
+}
+
+impl IndexEntry {
+    pub fn build_from_file(
+        file_hash: [u8; 20],
+        repo_relative_path: &str,
+        metadata: fs::Metadata,
+    ) -> anyhow::Result<Self> {
+        // TODO: This is linux only currently
+        Ok(IndexEntry {
+            ctime: TimePair {
+                s: u32::try_from(metadata.ctime())?,
+                ns: u32::try_from(metadata.ctime_nsec())?,
+            },
+            mtime: TimePair {
+                s: u32::try_from(metadata.mtime())?,
+                ns: u32::try_from(metadata.mtime_nsec())?,
+            },
+            dev: u32::try_from(metadata.dev())?,
+            ino: u32::try_from(metadata.ino())?,
+            mode: metadata.mode(),
+            uid: metadata.uid(),
+            gid: metadata.gid(),
+            size: u32::try_from(metadata.size())?,
+            sha: file_hash,
+            flags: repo_relative_path.len().min(0xFFF) as u16,
+            name: repo_relative_path.to_owned(),
+        })
+    }
+}
+
+impl Debug for IndexEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let assume_valid = (self.flags >> 15) & 1 == 1;
+        let extended = (self.flags >> 14) & 1 == 1;
+        let stage = (self.flags >> 12) & 0x3;
+        let name_len = self.flags & 0xFFF;
+
+        f.debug_struct("IndexEntry")
+            .field("ctime", &format_args!("{}.{}", self.ctime.s, self.ctime.ns))
+            .field("mtime", &format_args!("{}.{}", self.mtime.s, self.mtime.ns))
+            .field("dev", &self.dev)
+            .field("ino", &self.ino)
+            .field("mode", &self.mode)
+            .field("uid", &self.uid)
+            .field("gid", &self.gid)
+            .field("size", &self.size)
+            .field("sha", &hex::encode(&self.sha))
+            .field(
+                "flags",
+                &format_args!(
+                    "assume_valid={} extended={} stage={} name_len={}",
+                    assume_valid, extended, stage, name_len
+                ),
+            )
+            .field("name", &self.name)
+            .finish()
+    }
 }
 
 #[derive(Debug)]
@@ -227,7 +287,7 @@ impl IndexReader {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct TimePair {
     pub s: u32,
     pub ns: u32,

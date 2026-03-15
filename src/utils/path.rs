@@ -1,5 +1,8 @@
-use std::path::{Component, Path, PathBuf};
 use anyhow::Context;
+use pathdiff::diff_paths;
+use std::
+    path::Path
+;
 
 use crate::utils::repo::repo_root;
 
@@ -15,29 +18,12 @@ pub fn make_root_relative(path: impl AsRef<Path>) -> anyhow::Result<String> {
     Ok(repo_relative_path.to_string_lossy().into())
 }
 
-pub fn relative_path(target: impl AsRef<Path>, base: impl AsRef<Path>) -> PathBuf {
-    let mut target_components = target.as_ref().components().peekable();
-    let mut base_components = base.as_ref().components().peekable();
-
-    // Strip common prefix
-    while target_components.peek() == base_components.peek() {
-        target_components.next();
-        base_components.next();
-    }
-
-    // For each remaining base component, add a ".."
-    let mut result = PathBuf::new();
-    for _ in base_components {
-        result.push(Component::ParentDir);
-    }
-    for c in target_components {
-        result.push(c);
-    }
-    result
+pub fn relative_path_string(
+    target: impl AsRef<Path>,
+    base: impl AsRef<Path>,
+) -> anyhow::Result<String> {
+    Ok(diff_paths(target, base)
+        .context("Unable to compute relative path")?
+        .to_string_lossy()
+        .to_string())
 }
-
-pub fn relative_path_string(target: impl AsRef<Path>, base: impl AsRef<Path>) -> String {
-    relative_path(target, base).to_string_lossy().to_string()
-}
-
-

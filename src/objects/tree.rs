@@ -1,8 +1,11 @@
-use anyhow::Context;
-use itertools::Itertools;
-use anyhow::anyhow;
+use std::collections::HashMap;
 
-use crate::objects::GitObject;
+use anyhow::Context;
+use anyhow::anyhow;
+use itertools::Itertools;
+
+use crate::objects::Object;
+use crate::objects::{GitObject, ObjectType};
 
 #[derive(Debug)]
 pub struct Tree {
@@ -90,4 +93,29 @@ impl TreeEntry {
             _ => Err(anyhow!("Invalid tree entry mode: {}", self.mode)),
         }
     }
+}
+
+pub fn flatten_tree_from_disk(tree_hash: &str) -> anyhow::Result<HashMap<String, TreeEntry>> {
+    pub fn helper_rec(
+        tree_hash: &str,
+        prefix_dir: &str,
+    ) -> anyhow::Result<HashMap<String, TreeEntry>> {
+        let mut map = HashMap::new();
+        let tree = Object::<Tree>::read_from_disk(tree_hash, ObjectType::Tree)?;
+
+        for entry in tree.inner.entries {
+            let prefixed_path = format!("{prefix_dir}{}", entry.path);
+
+            if entry.get_type()? == "blob" {
+                map.insert(prefixed_path, entry);
+            } else if entry.get_type()? == "tree" {
+                let dir_path = format!("{}/", prefixed_path);
+                map.extend(helper_rec(&entry.hash, &dir_path)?);
+            }
+        }
+
+        Ok(map)
+    }
+
+    helper_rec(tree_hash, "")
 }

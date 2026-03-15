@@ -1,17 +1,13 @@
 use std::{
     fs::{self},
-    os::unix::fs::MetadataExt,
 };
 
 use anyhow::Context;
 use clap::Args;
 
 use crate::{
-    commands::{
-        hash_object::hash_object_from_disk,
-        remove,
-    },
-    objects::{IndexEntry, ObjectType, TimePair},
+    commands::{hash_object::hash_object_from_disk, remove},
+    objects::{IndexEntry, ObjectType},
     utils::path::make_root_relative,
 };
 
@@ -39,27 +35,7 @@ impl AddArg {
 
             let hash = hash_object_from_disk(&path, ObjectType::Blob, true)?;
 
-            // TODO: This is linux only currently
-            let entry = IndexEntry {
-                ctime: TimePair {
-                    s: u32::try_from(metadata.ctime())?,
-                    ns: u32::try_from(metadata.ctime_nsec())?,
-                },
-                mtime: TimePair {
-                    s: u32::try_from(metadata.mtime())?,
-                    ns: u32::try_from(metadata.mtime_nsec())?,
-                },
-                dev: u32::try_from(metadata.dev())?,
-                ino: u32::try_from(metadata.ino())?,
-                mode: metadata.mode(),
-                uid: metadata.uid(),
-                gid: metadata.gid(),
-                size: u32::try_from(metadata.size())?,
-                sha: hash,
-                flags: normalized.len().min(0xFFF) as u16,
-                name: normalized,
-            };
-
+            let entry = IndexEntry::build_from_file(hash, &normalized, metadata)?;
             new_index.entries.push(entry);
         }
 
