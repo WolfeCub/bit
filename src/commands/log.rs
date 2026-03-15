@@ -20,9 +20,11 @@ pub struct LogArg {
 
 impl LogArg {
     pub fn run(self) -> anyhow::Result<()> {
-        let map = build_hash_to_ref_map()?;
+        let Ok(log_commit) = self.commit.map_or_else(|| resolve_ref("HEAD"), Ok) else {
+            anyhow::bail!("current branch does not have any commits at HEAD")
+        };
 
-        let log_commit = self.commit.map_or_else(|| resolve_ref("HEAD"), Ok)?;
+        let map = build_hash_to_ref_map()?;
         for item in CommitIter::new(log_commit.clone()) {
             let (hash, commit) = item?;
             let (author, date) = commit.parse_author_date();

@@ -4,10 +4,11 @@ use clap::Args;
 
 use crate::{
     commands::{
-        hash_object::hash_object_hex, status::get_changes_to_be_committed_text, write_tree::write_tree,
+        hash_object::hash_object_hex, status::get_changes_to_be_committed_text,
+        write_tree::write_tree,
     },
     objects::{Commit, Index, Object, ObjectType},
-    utils::{config::get_user_info, editor, git_time, repo::{head_state, repo_root}},
+    utils::{config::get_user_info, editor, git_time, head::HeadState, repo::repo_root},
 };
 
 /// Creates a new commit with the current index as the tree, and HEAD as the parent
@@ -21,35 +22,29 @@ impl CommitArg {
     pub fn run(self) -> anyhow::Result<()> {
         let root = repo_root()?;
 
-        let head_state = head_state()?;
+        let head_state = HeadState::read_from_disk()?;
 
-        // TODO: Support detached commits
-        if head_state.detached {
-            anyhow::bail!("Cannot commit in detached HEAD state");
-        }
+        let (head_hash, head_branch) = match head_state {
+            // TODO: Support detached commits
+            HeadState::Detached { .. } => {
+                anyhow::bail!("Cannot commit in detached HEAD state");
+            }
+            HeadState::Attached { hash, branch } => (Some(hash), branch),
+            HeadState::Unborn { branch } => (None, branch),
+        };
 
         let new_tree = write_tree()?;
 
         let (user, email) = get_user_info();
         let author = format!("{} <{}> {}", user, email, git_time());
 
-        let message = self.message.map_or_else(
-            || {
-                let index = Index::parse_from_disk()?;
-                let commit =
-                    Object::<Commit>::read_from_disk(&head_state.hash, ObjectType::Commit)?;
-                let changes = get_changes_to_be_committed_text(&commit.inner.tree, &index)?;
-                editor(
-                    root.join(".bit/COMMIT_EDITMSG"),
-                    &initial_commit_text(&head_state.name, changes),
-                )
-            },
-            Ok,
-        )?;
+        let message = self
+            .message
+            .map_or_else(|| open_commit_editor(head_hash.as_deref(), &head_branch), Ok)?;
 
         let commit = Commit {
             tree: new_tree,
-            parent: Some(head_state.hash),
+            parent: head_hash,
             author: author.clone(),
             committer: author,
             gpgsig: None, // TODO: Could be fun to support this
@@ -59,12 +54,26 @@ impl CommitArg {
         let commit_hash = hash_object_hex(ObjectType::Commit, commit, true)?;
 
         // Update HEAD to point to new commit, and update branch ref if HEAD is attached
-        let path = root.join(".bit/refs/heads/").join(&head_state.name);
+        let path = root.join(".bit/refs/heads/").join(&head_branch);
         fs::create_dir_all(path.parent().expect("Could not get parent directory"))?;
         fs::write(path, commit_hash)?;
 
         Ok(())
     }
+}
+
+fn open_commit_editor(
+    head_hash: Option<&str>,
+    head_branch: &String,
+) -> Result<String, anyhow::Error> {
+    let root = repo_root()?;
+    let index = Index::parse_from_disk()?;
+
+    let changes = get_changes_to_be_committed_text(head_hash, &index)?;
+    editor(
+        root.join(".bit/COMMIT_EDITMSG"),
+        &initial_commit_text(head_branch, changes),
+    )
 }
 
 fn initial_commit_text(branch_name: &str, changes: Vec<String>) -> String {

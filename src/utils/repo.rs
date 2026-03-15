@@ -65,31 +65,3 @@ pub fn find_hash(target: &str) -> anyhow::Result<String> {
         .find_map(|prefix| resolve_ref(&format!("{}{}", prefix, target)).ok())
         .context("Unable to resolve or ambiguous hash or ref")
 }
-
-#[derive(Debug)]
-pub struct HeadState {
-    pub name: String,
-    pub hash: String,
-    pub detached: bool,
-}
-
-pub fn head_state() -> anyhow::Result<HeadState> {
-    let root = repo_root()?;
-    let head_content = fs::read_to_string(root.join(".bit/HEAD"))?;
-    let head = head_content.trim();
-
-    let (ref_target, name, detached) = if let Some(refs_path) = head.strip_prefix("ref: ") {
-        let branch = refs_path.strip_prefix("refs/heads/").unwrap_or(refs_path);
-        (refs_path, branch.to_string(), false)
-    } else {
-        (head, head.to_string(), true)
-    };
-
-    let hash = find_hash(ref_target)?;
-
-    Ok(HeadState {
-        name,
-        hash,
-        detached,
-    })
-}

@@ -12,8 +12,9 @@ use crate::{
     },
     utils::{
         bit_dir_walker::BitDirWalker,
+        head::HeadState,
         path::relative_path_string,
-        repo::{cwd, head_state, repo_root},
+        repo::{cwd, repo_root},
     },
 };
 
@@ -25,29 +26,39 @@ pub struct StatusArg {}
 impl StatusArg {
     pub fn run(self) -> anyhow::Result<()> {
         let root = repo_root()?;
-        let head_state = head_state()?;
+        let head_state = HeadState::read_from_disk()?;
 
-        if head_state.detached {
-            println!("HEAD detached at {}", head_state.hash);
-        } else {
-            println!("On branch {}", head_state.name);
-        }
-
-        let commit = Object::<Commit>::read_from_disk(&head_state.hash, ObjectType::Commit)?;
+        let head_hash = match head_state {
+            HeadState::Detached { hash, .. } => {
+                println!("HEAD detached at {}", hash);
+                Some(hash)
+            }
+            HeadState::Attached { branch, hash } => {
+                println!("On branch {}", branch);
+                Some(hash)
+            }
+            HeadState::Unborn { branch } => {
+                println!("On branch {}\n\nNo commits yet", branch);
+                None
+            }
+        };
 
         let ignore = Ignore::build_from_disk()?;
         let index = Index::parse_from_disk()?;
 
-        let changes = get_changes_to_be_committed_text(&commit.inner.tree, &index)?;
+        let head_commit = head_hash
+            .map(|hh| -> anyhow::Result<String> {
+                Ok(Object::<Commit>::read_from_disk(&hh, ObjectType::Commit)?
+                    .inner
+                    .tree)
+            })
+            .transpose()?;
+        let changes = get_changes_to_be_committed_text(head_commit.as_deref(), &index)?;
         if changes.len() > 0 {
             println!("\nChanges to be committed:");
             for change in changes {
                 println!("{}", change.green());
             }
-        }
-
-        if index.entries.len() > 0 {
-            println!("\nChanges not staged for commit:");
         }
 
         let mut files = BitDirWalker::new(&root, ignore)?
@@ -62,11 +73,16 @@ impl StatusArg {
 
         // Compare the index to the file system to see what's modified or deleted
         // These are our unstaged changes
+        let mut unstaged_changes = Vec::<String>::with_capacity(index.entries.len());
         for entry in index.entries.iter() {
             let relative = relative_path_string(&root.join(&entry.name), cwd()?)?;
 
             if !root.join(&entry.name).exists() {
-                println!("{}", format!("        deleted:    {}", &relative).red());
+                unstaged_changes.push(
+                    format!("        deleted:    {}", &relative)
+                        .red()
+                        .to_string(),
+                );
                 continue;
             }
 
@@ -83,9 +99,20 @@ impl StatusArg {
                 let hash = hash_object_from_disk(path, ObjectType::Blob, false)?;
 
                 if hash != entry.sha {
-                    println!("{}", format!("        modified:   {}", &relative).red());
+                    unstaged_changes.push(
+                        format!("        modified:   {}", &relative)
+                            .red()
+                            .to_string(),
+                    );
                 }
             }
+        }
+
+        if unstaged_changes.len() > 0 {
+            println!(
+                "\nChanges not staged for commit:\n{}",
+                unstaged_changes.join("\n")
+            );
         }
 
         if files.len() > 0 {
@@ -117,19 +144,26 @@ pub struct StagedChange<'a> {
 }
 
 pub fn get_changes_to_be_committed<'a>(
-    tree_hash: &str,
+    tree_hash: Option<&str>,
     index: &'a Index,
 ) -> anyhow::Result<Vec<StagedChange<'a>>> {
-    let flattened = flatten_tree_from_disk(tree_hash)?;
+    let flattened = tree_hash.map(flatten_tree_from_disk).transpose()?;
 
     Ok(index
         .entries
         .iter()
         .filter_map(|entry| {
-            let new_file = match flattened.get(&entry.name) {
-                None => true,
-                Some(tree_entry) if *tree_entry.hash != hex::encode(entry.sha) => false,
-                _ => return None,
+            // If we have a parent hash compute modified vs new files, otherwise just show all
+            // the files in the index as new (can't have modifications without a parent commit)
+            let new_file = if let Some(flattened) = flattened.as_ref() {
+                let new_file = match flattened.get(&entry.name) {
+                    None => true,
+                    Some(tree_entry) if *tree_entry.hash != hex::encode(entry.sha) => false,
+                    _ => return None,
+                };
+                new_file
+            } else {
+                true
             };
             Some(StagedChange { new_file, entry })
         })
@@ -137,7 +171,7 @@ pub fn get_changes_to_be_committed<'a>(
 }
 
 pub fn get_changes_to_be_committed_text(
-    tree_hash: &str,
+    tree_hash: Option<&str>,
     index: &Index,
 ) -> anyhow::Result<Vec<String>> {
     let root = repo_root()?;

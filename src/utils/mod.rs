@@ -2,6 +2,7 @@ pub mod bit_dir_walker;
 pub mod config;
 pub mod path;
 pub mod repo;
+pub mod head;
 
 use std::{fs, path::Path, process::Command};
 
