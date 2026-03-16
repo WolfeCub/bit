@@ -61,7 +61,7 @@ impl StatusArg {
             }
         }
 
-        let mut files = BitDirWalker::new(&root, ignore)?
+        let mut files = BitDirWalker::new_with_ignore(&root, ignore)?
             .map(|entry| -> anyhow::Result<(String, fs::Metadata)> {
                 let path = entry.path();
                 Ok((

@@ -9,7 +9,7 @@ use crate::utils::bit_dir_walker::BitDirWalker;
 use crate::utils::repo::repo_root;
 use crate::{
     commands::show_ref::resolve_ref,
-    objects::{Ignore, Object, ObjectType},
+    objects::{Object, ObjectType},
 };
 
 /// Shows the commit history starting from a given commit (defaulting to HEAD).
@@ -53,11 +53,10 @@ impl LogArg {
 
 fn build_hash_to_ref_map() -> anyhow::Result<HashMap<String, Vec<String>>> {
     let mut map: HashMap<String, Vec<String>> = HashMap::new();
-    let ignore = Ignore::build_from_disk()?;
     let root = repo_root()?;
     let refs_dir = root.join(".bit/refs");
 
-    for entry in BitDirWalker::new(&refs_dir, ignore)? {
+    for entry in BitDirWalker::new(&refs_dir)? {
         if entry.file_type()?.is_file() {
             let ref_name = entry
                 .path()

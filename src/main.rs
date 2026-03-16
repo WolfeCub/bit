@@ -17,6 +17,7 @@ use commands::tag::TagArg;
 use commands::write_tree::WriteTreeArg;
 
 use crate::commands::add::AddArg;
+use crate::commands::branch::BranchArg;
 use crate::commands::commit::CommitArg;
 use crate::commands::read_tree::ReadTreeArg;
 use crate::commands::remove::RemoveArg;
@@ -47,6 +48,7 @@ enum Args {
     Status(StatusArg),
     Commit(CommitArg),
     ReadTree(ReadTreeArg),
+    Branch(BranchArg),
 }
 
 fn main() {
@@ -75,6 +77,7 @@ fn main() {
         Args::Status(a) => a.run(),
         Args::Commit(a) => a.run(),
         Args::ReadTree(a) => a.run(),
+        Args::Branch(a) => a.run(),
     };
 
     if let Err(e) = result {

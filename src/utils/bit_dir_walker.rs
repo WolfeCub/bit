@@ -7,17 +7,23 @@ use crate::objects::Ignore;
 pub struct BitDirWalker {
     root: PathBuf,
     stack: Vec<ReadDir>,
-    ignore: Ignore,
+    ignore: Option<Ignore>,
 }
 
 impl BitDirWalker {
-    pub fn new(root: impl AsRef<Path>, ignore: Ignore) -> std::io::Result<Self> {
+    pub fn new(root: impl AsRef<Path>) -> std::io::Result<Self> {
         let root = root.as_ref().to_path_buf();
         let stack = vec![fs::read_dir(&root)?];
-        Ok(BitDirWalker {
+        Ok(Self {
             root,
             stack,
-            ignore,
+            ignore: None,
+        })
+    }
+    pub fn new_with_ignore(root: impl AsRef<Path>, ignore: Ignore) -> std::io::Result<Self> {
+        Ok(Self {
+            ignore: Some(ignore),
+            ..BitDirWalker::new(root)?
         })
     }
 }
@@ -42,7 +48,12 @@ impl Iterator for BitDirWalker {
                     let Some(rel) = rel.to_str() else { continue };
                     let is_dir = entry.file_type().is_ok_and(|ft| ft.is_dir());
 
-                    if self.ignore.is_file_ignored(rel, is_dir) {
+                    if self
+                        .ignore
+                        .as_ref()
+                        .map(|i| i.is_file_ignored(rel, is_dir))
+                        .unwrap_or(false)
+                    {
                         continue;
                     }
 

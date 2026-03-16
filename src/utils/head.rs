@@ -1,9 +1,6 @@
 use std::{fs, io};
 
-use crate::{
-    commands::show_ref::resolve_ref,
-    utils::repo::repo_root,
-};
+use crate::{commands::show_ref::resolve_ref, utils::repo::repo_root};
 
 #[derive(Debug)]
 pub enum HeadState {
