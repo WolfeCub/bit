@@ -1,5 +1,5 @@
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs::{self, OpenOptions},
     io::Write,
 };
@@ -7,7 +7,7 @@ use std::{
 use anyhow::Context;
 use clap::Args;
 
-use crate::objects::{Index, IndexEntry, Object, ObjectType, flatten_tree_from_disk};
+use crate::objects::{Index, IndexEntry, Object, ObjectType, TreeEntry, flatten_tree_from_disk};
 use hex::FromHex;
 
 /// Extract the contents of a tree object into the working directory
@@ -31,6 +31,17 @@ impl ReadTreeArg {
 // TODO: Merging is really simple. Eventually let's implement something smarter
 pub fn read_tree(tree: &str, update_working_directory: bool) -> anyhow::Result<()> {
     let flat_tree = flatten_tree_from_disk(&tree)?;
+    read_flattened_tree_ignorelist(flat_tree, update_working_directory, None)
+}
+
+/// Ignored files are not updated in the working directory. Use with caution this only makes sense
+/// in certain situations. e.g. You've already manually checked for conflicts like when switching
+/// branches
+pub fn read_flattened_tree_ignorelist(
+    flat_tree: HashMap<String, TreeEntry>,
+    update_working_directory: bool,
+    ignore_list: Option<HashSet<String>>,
+) -> anyhow::Result<()> {
     let mut index = Index::parse_from_disk()?;
 
     let mut new_entries = HashSet::<String>::new();
@@ -56,6 +67,15 @@ pub fn read_tree(tree: &str, update_working_directory: bool) -> anyhow::Result<(
 
     if update_working_directory {
         for entry in index.entries.iter_mut() {
+            // Don't overwrite files in the ignore list
+            if ignore_list
+                .as_ref()
+                .map(|il| il.contains(&entry.name))
+                .unwrap_or(false)
+            {
+                continue;
+            }
+
             let hash = hex::encode(entry.sha);
             let object = Object::<Vec<u8>>::read_from_disk(&hash, ObjectType::Blob)?;
 

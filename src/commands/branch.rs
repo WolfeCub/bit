@@ -81,7 +81,7 @@ impl BranchArg {
     }
 }
 
-fn create_branch(branch: &str, start_hash: &str, force: bool) -> anyhow::Result<()> {
+pub fn create_branch(branch: &str, start_hash: &str, force: bool) -> anyhow::Result<()> {
     let root = repo_root()?;
     let path = root.join(".bit/refs/heads").join(branch);
     OpenOptions::new()
