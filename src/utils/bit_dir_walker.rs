@@ -4,13 +4,13 @@ use std::path::{Path, PathBuf};
 use crate::objects::Ignore;
 
 /// An iterator that recursively walks the dir tree yields all files (no dirs) and respects .bitignore rules.
-pub struct BitDirWalker {
+pub struct BitDirWalker<'a> {
     root: PathBuf,
     stack: Vec<ReadDir>,
-    ignore: Option<Ignore>,
+    ignore: Option<&'a Ignore>,
 }
 
-impl BitDirWalker {
+impl<'a> BitDirWalker<'a> {
     pub fn new(root: impl AsRef<Path>) -> std::io::Result<Self> {
         let root = root.as_ref().to_path_buf();
         let stack = vec![fs::read_dir(&root)?];
@@ -20,7 +20,7 @@ impl BitDirWalker {
             ignore: None,
         })
     }
-    pub fn new_with_ignore(root: impl AsRef<Path>, ignore: Ignore) -> std::io::Result<Self> {
+    pub fn new_with_ignore(root: impl AsRef<Path>, ignore: &'a Ignore) -> std::io::Result<Self> {
         Ok(Self {
             ignore: Some(ignore),
             ..BitDirWalker::new(root)?
@@ -28,7 +28,7 @@ impl BitDirWalker {
     }
 }
 
-impl Iterator for BitDirWalker {
+impl<'a> Iterator for BitDirWalker<'a> {
     type Item = DirEntry;
 
     fn next(&mut self) -> Option<Self::Item> {

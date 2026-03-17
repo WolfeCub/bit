@@ -5,6 +5,7 @@ use itertools::Itertools;
 use crate::utils::repo::repo_root;
 
 
+#[derive(Debug, Clone)]
 pub struct Ignore {
     patterns: Vec<Pattern>,
 }
@@ -39,7 +40,7 @@ impl Ignore {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 enum Token {
     Slash,
     Literal(String),
@@ -55,7 +56,7 @@ enum Token {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Pattern {
     tokens: Vec<Token>,
     is_negated: bool,

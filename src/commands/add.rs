@@ -1,14 +1,9 @@
-use std::{
-    fs::{self},
-};
-
-use anyhow::Context;
 use clap::Args;
 
 use crate::{
-    commands::{hash_object::hash_object_from_disk, remove},
-    objects::{IndexEntry, ObjectType},
-    utils::path::make_root_relative,
+    commands::hash_object::hash_object_from_disk,
+    objects::{Ignore, Index, IndexEntry, ObjectType},
+    utils::path::{ArgListExpander, make_root_relative},
 };
 
 /// Adds a file to the index (creating a blob object for it)
@@ -19,29 +14,28 @@ pub struct AddArg {
 
 impl AddArg {
     pub fn run(self) -> anyhow::Result<()> {
-        let mut new_index = remove::remove(&self.paths, false)?;
+        let ignore = Ignore::build_from_disk()?;
 
-        // TODO: Remove already does this. We're duplicating work here.
-        // we can maybe annotate it with #[cached] or pass around the normalized_paths
-        let normalized_paths = self
-            .paths
-            .iter()
-            .map(make_root_relative)
-            .collect::<anyhow::Result<Vec<_>>>()?;
+        let mut index = Index::parse_from_disk()?;
 
-        for (path, normalized) in self.paths.into_iter().zip(normalized_paths.into_iter()) {
-            let metadata = fs::metadata(&path)
-                .with_context(|| format!("Failed to read metadata for '{}'", path))?;
+        let mut arg_expander = ArgListExpander::new_recursive(&self.paths, &ignore)?;
+        while let Some((path, metadata)) = arg_expander.next() {
+            let normalized = make_root_relative(&path)?;
 
-            let hash = hash_object_from_disk(&path, ObjectType::Blob, true)?;
-
+            let hash = hash_object_from_disk(path, ObjectType::Blob, true)?;
             let entry = IndexEntry::build_from_file(hash, &normalized, metadata)?;
-            new_index.entries.push(entry);
+
+            // Update the existing entry if we have one otherwise add a new one.
+            if let Some(index_entry) = index.entries.iter_mut().find(|ie| ie.name == normalized) {
+                *index_entry = entry;
+            } else {
+                index.entries.push(entry);
+            }
         }
 
-        new_index.entries.sort_by(|a, b| a.name.cmp(&b.name));
+        index.entries.sort_by(|a, b| a.name.cmp(&b.name));
 
-        new_index.write_to_disk()?;
+        index.write_to_disk()?;
 
         Ok(())
     }

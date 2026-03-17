@@ -3,17 +3,23 @@ use std::fs;
 use anyhow::Context;
 use clap::Args;
 
-use crate::{objects::Index, utils::path::make_root_relative};
+use crate::{
+    objects::{Ignore, Index},
+    utils::path::{ArgListExpander, make_root_relative},
+};
 
 /// Remove a file from the index and delete it from the filesystem.
 #[derive(Args, Debug)]
 pub struct RemoveArg {
     pub paths: Vec<String>,
+
+    #[arg(short)]
+    pub recursive: bool,
 }
 
 impl RemoveArg {
     pub fn run(self) -> anyhow::Result<()> {
-        let new_index = remove(&self.paths, true)?;
+        let new_index = remove(&self.paths, true, self.recursive)?;
 
         new_index.write_to_disk()?;
 
@@ -21,28 +27,23 @@ impl RemoveArg {
     }
 }
 
-pub fn remove(paths: &[String], delete_file: bool) -> anyhow::Result<Index> {
-    let index = Index::parse_from_disk()?;
+pub fn remove(paths: &[String], delete_file: bool, recursive: bool) -> anyhow::Result<Index> {
+    let ignore = Ignore::build_from_disk()?;
 
-    let normalized_paths = paths
-        .iter()
-        .map(make_root_relative)
-        .collect::<anyhow::Result<Vec<_>>>()?;
+    let mut index = Index::parse_from_disk()?;
 
-    // TODO: This is inefficient, we should be able to do this in one pass
-    let new_entries = index
-        .entries
-        .into_iter()
-        .filter(|entry| !normalized_paths.contains(&entry.name))
-        .collect::<Vec<_>>();
-
-    let new_index = Index::from_entries(new_entries);
+    let expanded_args = ArgListExpander::new(paths, &ignore, recursive)?.collect::<Vec<_>>();
+    for (path, _) in expanded_args.iter() {
+        let normalized = make_root_relative(path)?;
+        index.entries.retain(|e| e.name != normalized);
+    }
 
     if delete_file {
-        for p in paths.iter() {
-            fs::remove_file(p).with_context(|| format!("Failed to remove file '{}'", p))?;
+        for (path, _) in expanded_args.iter() {
+            fs::remove_file(path)
+                .with_context(|| format!("Failed to remove file '{}'", path.to_string_lossy()))?;
         }
     }
 
-    Ok(new_index)
+    Ok(index)
 }
