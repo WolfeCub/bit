@@ -9,7 +9,7 @@ use clap::Args;
 use crate::utils::{
     bit_dir_walker::BitDirWalker,
     head::HeadState,
-    repo::{find_hash, repo_root},
+    repo::{find_hash, repo_root, switch_head_to_branch},
 };
 use colored::Colorize;
 
@@ -57,12 +57,8 @@ impl BranchArg {
 
             move_branch(&old_branch, &new_branch, self.force)?;
 
-            // If we renamed the current branch, update HEAD to point to the new name
             if head_state.branch_name().is_some_and(|b| b == old_branch) {
-                fs::write(
-                    repo_root()?.join(".bit/HEAD"),
-                    format!("ref: refs/heads/{}", new_branch),
-                )?;
+                switch_head_to_branch(&new_branch)?;
             }
             return Ok(());
         }
@@ -106,7 +102,7 @@ fn create_branch(branch: &str, start_hash: &str, force: bool) -> anyhow::Result<
     Ok(())
 }
 
-fn move_branch(old_branch: &str, new_branch: &str, force: bool) -> anyhow::Result<()> {
+fn move_branch(old_branch: &str, new_branch: &str, _force: bool) -> anyhow::Result<()> {
     let root = repo_root()?;
     let heads = root.join(".bit/refs/heads");
     let new_path = heads.join(new_branch);

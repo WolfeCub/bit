@@ -49,7 +49,9 @@ pub fn find_hash(target: &str) -> anyhow::Result<String> {
             .filter_map(|e| {
                 let file_name = e.file_name();
                 let file_name = file_name.to_string_lossy();
-                file_name.starts_with(&target[2..]).then_some(file_name.to_string())
+                file_name
+                    .starts_with(&target[2..])
+                    .then_some(file_name.to_string())
             })
             .collect::<Vec<String>>();
 
@@ -67,4 +69,13 @@ pub fn find_hash(target: &str) -> anyhow::Result<String> {
         .iter()
         .find_map(|prefix| resolve_ref(&format!("{}{}", prefix, target)).ok())
         .context("Unable to resolve or ambiguous hash or ref")
+}
+
+pub fn switch_head_to_branch(branch_name: &str) -> anyhow::Result<()> {
+    fs::write(
+        repo_root()?.join(".bit/HEAD"),
+        format!("ref: refs/heads/{}", branch_name),
+    )?;
+
+    Ok(())
 }

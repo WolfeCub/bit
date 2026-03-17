@@ -16,3 +16,4 @@ pub mod status;
 pub mod commit;
 pub mod read_tree;
 pub mod branch;
+pub mod switch;

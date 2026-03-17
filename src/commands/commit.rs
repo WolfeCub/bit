@@ -7,7 +7,7 @@ use crate::{
         hash_object::hash_object_hex, status::get_changes_to_be_committed_text,
         write_tree::write_tree,
     },
-    objects::{Commit, Index, Object, ObjectType},
+    objects::{Commit, Index, ObjectType},
     utils::{config::get_user_info, editor, git_time, head::HeadState, repo::repo_root},
 };
 

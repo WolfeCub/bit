@@ -22,6 +22,7 @@ use crate::commands::commit::CommitArg;
 use crate::commands::read_tree::ReadTreeArg;
 use crate::commands::remove::RemoveArg;
 use crate::commands::status::StatusArg;
+use crate::commands::switch::SwitchArg;
 use crate::commands::testing::TestArg;
 
 #[derive(Parser, Debug)]
@@ -49,16 +50,14 @@ enum Args {
     Commit(CommitArg),
     ReadTree(ReadTreeArg),
     Branch(BranchArg),
+    Switch(SwitchArg),
 }
 
 fn main() {
     let args = Args::parse();
 
     let result = match args {
-        Args::MarkdownExport => {
-            clap_markdown::print_help_markdown::<Args>();
-            Ok(())
-        }
+        Args::MarkdownExport => Ok(clap_markdown::print_help_markdown::<Args>()),
         Args::Test(a) => a.run(),
 
         Args::Init(a) => a.run(),
@@ -78,6 +77,7 @@ fn main() {
         Args::Commit(a) => a.run(),
         Args::ReadTree(a) => a.run(),
         Args::Branch(a) => a.run(),
+        Args::Switch(a) => a.run(),
     };
 
     if let Err(e) = result {
