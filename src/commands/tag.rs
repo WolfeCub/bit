@@ -12,7 +12,7 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct TagArg {
     /// Create a tag object instead of a lightweight tag. This now also requires a message to be provided
-    #[arg(short = 'a', default_value_t = false, requires = "name")]
+    #[arg(short = 'a', requires = "name")]
     pub tag_object: bool,
 
     #[arg(short, long, requires = "tag_object")]

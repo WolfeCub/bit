@@ -11,7 +11,7 @@ use colored::Colorize;
 #[derive(Args, Debug)]
 pub struct LsFilesArg {
     /// This doesn't exist in actual git but it's useful for inspecting our index
-    #[arg(short, long, default_value_t = false)]
+    #[arg(short, long)]
     pub verbose: bool,
 }
 

@@ -49,4 +49,11 @@ impl HeadState {
             }) // TODO: resolve tag
         }
     }
+
+    pub fn branch_name(&self) -> Option<&str> {
+        match self {
+            HeadState::Unborn { branch } | HeadState::Attached { branch, .. } => Some(branch),
+            HeadState::Detached { .. } => None,
+        }
+    }
 }

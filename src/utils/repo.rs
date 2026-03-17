@@ -21,7 +21,6 @@ pub fn repo_root() -> anyhow::Result<PathBuf> {
     }
 }
 
-
 /// Thin wrapper around `current_dir` that provides caching so we can reuse
 /// The working directly won't change during any git/bit calls
 #[cached(result = true)]
@@ -44,15 +43,19 @@ pub fn find_hash(target: &str) -> anyhow::Result<String> {
             .map(|rd| rd.collect::<Vec<_>>())
             .unwrap_or_default();
 
-        // If there's exactly one hash and it's prefix matches target return it
-        if let [Ok(e)] = entries.as_slice() {
-            let file_name = e.file_name();
-            let file_name = file_name.to_string_lossy();
+        let matches = entries
+            .iter()
+            .filter_map(|r| r.as_ref().ok())
+            .filter_map(|e| {
+                let file_name = e.file_name();
+                let file_name = file_name.to_string_lossy();
+                file_name.starts_with(&target[2..]).then_some(file_name.to_string())
+            })
+            .collect::<Vec<String>>();
 
-            if file_name.starts_with(&target[2..]) {
-                // Reconstruct the full hash
-                return Ok(format!("{}{}", &target[..2], file_name));
-            }
+        // If there's exactly one hash and it's prefix matches target return it
+        if let [file_name] = &matches[..] {
+            return Ok(format!("{}{}", &target[..2], file_name));
         }
     }
 

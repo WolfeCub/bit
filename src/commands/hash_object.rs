@@ -17,7 +17,7 @@ pub struct HashObjectArg {
     #[arg(short, long, default_value_t = ObjectType::Blob)]
     pub type_: ObjectType,
 
-    #[arg(short, long, default_value_t = false)]
+    #[arg(short, long)]
     pub write: bool,
 
     pub path: String,

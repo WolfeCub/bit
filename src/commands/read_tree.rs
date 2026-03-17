@@ -13,10 +13,10 @@ use hex::FromHex;
 /// Extract the contents of a tree object into the working directory
 #[derive(Args, Debug)]
 pub struct ReadTreeArg {
-    #[arg(short, default_value_t = false)]
+    #[arg(short)]
     pub update_working_directory: bool,
 
-    #[arg(short, requires = "update_working_directory", default_value_t = false)]
+    #[arg(short, requires = "update_working_directory")]
     pub merge: bool,
 
     pub tree: String,
