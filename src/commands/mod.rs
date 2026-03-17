@@ -17,3 +17,4 @@ pub mod commit;
 pub mod read_tree;
 pub mod branch;
 pub mod switch;
+pub mod restore;

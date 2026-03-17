@@ -21,6 +21,7 @@ use crate::commands::branch::BranchArg;
 use crate::commands::commit::CommitArg;
 use crate::commands::read_tree::ReadTreeArg;
 use crate::commands::remove::RemoveArg;
+use crate::commands::restore::RestoreArg;
 use crate::commands::status::StatusArg;
 use crate::commands::switch::SwitchArg;
 use crate::commands::testing::TestArg;
@@ -51,6 +52,7 @@ enum Args {
     ReadTree(ReadTreeArg),
     Branch(BranchArg),
     Switch(SwitchArg),
+    Restore(RestoreArg),
 }
 
 fn main() {
@@ -78,6 +80,7 @@ fn main() {
         Args::ReadTree(a) => a.run(),
         Args::Branch(a) => a.run(),
         Args::Switch(a) => a.run(),
+        Args::Restore(a) => a.run(),
     };
 
     if let Err(e) = result {
