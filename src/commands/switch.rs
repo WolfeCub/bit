@@ -9,6 +9,7 @@ use crate::{
     utils::{head::HeadState, repo::switch_head_to_branch},
 };
 
+/// Switch between branches
 #[derive(Args, Debug)]
 pub struct SwitchArg {
     pub branch: String,

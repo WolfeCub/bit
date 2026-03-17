@@ -41,6 +41,9 @@ This document contains the help content for the `bit` command-line program.
 * [`bit add`↴](#bit-add)
 * [`bit status`↴](#bit-status)
 * [`bit commit`↴](#bit-commit)
+* [`bit read-tree`↴](#bit-read-tree)
+* [`bit branch`↴](#bit-branch)
+* [`bit switch`↴](#bit-switch)
 
 ## `bit`
 
@@ -63,6 +66,9 @@ This document contains the help content for the `bit` command-line program.
 * `add` — Adds a file to the index (creating a blob object for it)
 * `status` — Shows the current branch, staged changes, unstaged changes and untracked files
 * `commit` — Creates a new commit with the current index as the tree, and HEAD as the parent
+* `read-tree` — Extract the contents of a tree object into the working directory
+* `branch` — Creates, lists, deletes, or moves branches
+* `switch` — Switch between branches
 
 
 
@@ -107,8 +113,6 @@ Creates a bit object from a file on disk, and optionally writes it to the object
 
   Default value: `blob`
 * `-w`, `--write`
-
-  Default value: `false`
 
 
 
@@ -166,8 +170,6 @@ Creates a new tag or lists existing tags if no name is provided
 ###### **Options:**
 
 * `-a` — Create a tag object instead of a lightweight tag. This now also requires a message to be provided
-
-  Default value: `false`
 * `-m`, `--message <MESSAGE>`
 
 
@@ -193,8 +195,6 @@ Prints the list of files in the index
 ###### **Options:**
 
 * `-v`, `--verbose` — This doesn't exist in actual git but it's useful for inspecting our index
-
-  Default value: `false`
 
 
 
@@ -251,6 +251,54 @@ Creates a new commit with the current index as the tree, and HEAD as the parent
 ###### **Options:**
 
 * `-m`, `--message <MESSAGE>`
+
+
+
+## `bit read-tree`
+
+Extract the contents of a tree object into the working directory
+
+**Usage:** `bit read-tree [OPTIONS] <TREE>`
+
+###### **Arguments:**
+
+* `<TREE>`
+
+###### **Options:**
+
+* `-u`
+* `-m`
+
+
+
+## `bit branch`
+
+Creates, lists, deletes, or moves branches
+
+**Usage:** `bit branch [OPTIONS] [BRANCH] [SECOND_ARG]`
+
+###### **Arguments:**
+
+* `<BRANCH>`
+* `<SECOND_ARG>`
+
+###### **Options:**
+
+* `--force`
+* `-d`, `--delete`
+* `-m`, `--move`
+
+
+
+## `bit switch`
+
+Switch between branches
+
+**Usage:** `bit switch <BRANCH>`
+
+###### **Arguments:**
+
+* `<BRANCH>`
 
 
 
