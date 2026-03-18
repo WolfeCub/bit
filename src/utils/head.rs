@@ -1,6 +1,6 @@
 use std::{fs, io};
 
-use crate::{commands::show_ref::resolve_ref, utils::repo::repo_root};
+use crate::{commands::show_ref::resolve_ref, objects::{Commit, Object, ObjectType, Tree}, utils::repo::repo_root};
 
 #[derive(Debug)]
 pub enum HeadState {
@@ -54,6 +54,16 @@ impl HeadState {
         match self {
             HeadState::Unborn { branch } | HeadState::Attached { branch, .. } => Some(branch),
             HeadState::Detached { .. } => None,
+        }
+    }
+
+    pub fn read_commit(&self) -> anyhow::Result<Option<Commit>> {
+        match self {
+            HeadState::Unborn { .. } => Ok(None),
+            HeadState::Attached { hash, .. } | HeadState::Detached { hash, .. } => {
+                let commit = Object::<Commit>::read_from_disk(hash, ObjectType::Commit)?;
+                Ok(Some(commit.inner))
+            }
         }
     }
 }

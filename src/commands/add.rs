@@ -33,8 +33,7 @@ impl AddArg {
             }
         }
 
-        index.entries.sort_by(|a, b| a.name.cmp(&b.name));
-
+        index.sort();
         index.write_to_disk()?;
 
         Ok(())

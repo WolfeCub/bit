@@ -94,7 +94,7 @@ impl StatusArg {
                 continue;
             };
 
-            if file_ts_changed(entry, meta) {
+            if file_changed_heuristic(entry, meta) {
                 let path = root.join(&entry.name);
                 let hash = hash_object_from_disk(path, ObjectType::Blob, false)?;
 
@@ -128,13 +128,24 @@ impl StatusArg {
     }
 }
 
-fn file_ts_changed(entry: &IndexEntry, meta: fs::Metadata) -> bool {
+fn file_changed_heuristic(entry: &IndexEntry, meta: fs::Metadata) -> bool {
     let ctime_equal =
         meta.ctime() == i64::from(entry.ctime.s) && meta.ctime_nsec() == i64::from(entry.ctime.ns);
     let mtime_equal =
         meta.mtime() == i64::from(entry.mtime.s) && meta.mtime_nsec() == i64::from(entry.mtime.ns);
-    let files_different = !ctime_equal || !mtime_equal;
-    files_different
+    let size_equal = meta.size() == entry.size as u64;
+    let ino_equal = meta.ino() == entry.ino as u64;
+    let uid_equal = meta.uid() == entry.uid as u32;
+    let gid_equal = meta.gid() == entry.gid as u32;
+    let mode_equal = meta.mode() == entry.mode as u32;
+
+    !ctime_equal
+        || !mtime_equal
+        || !size_equal
+        || !ino_equal
+        || !uid_equal
+        || !gid_equal
+        || !mode_equal
 }
 
 #[derive(Debug)]

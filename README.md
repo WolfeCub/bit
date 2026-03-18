@@ -44,6 +44,7 @@ This document contains the help content for the `bit` command-line program.
 * [`bit read-tree`↴](#bit-read-tree)
 * [`bit branch`↴](#bit-branch)
 * [`bit switch`↴](#bit-switch)
+* [`bit restore`↴](#bit-restore)
 
 ## `bit`
 
@@ -69,6 +70,7 @@ This document contains the help content for the `bit` command-line program.
 * `read-tree` — Extract the contents of a tree object into the working directory
 * `branch` — Creates, lists, deletes, or moves branches
 * `switch` — Switch between branches
+* `restore` — Discards either working or staged changes for the given files
 
 
 
@@ -214,11 +216,15 @@ Checks if the passed path is ignored by .bitignore and prints it if it is
 
 Remove a file from the index and delete it from the filesystem
 
-**Usage:** `bit rm [PATHS]...`
+**Usage:** `bit rm [OPTIONS] [PATHS]...`
 
 ###### **Arguments:**
 
 * `<PATHS>`
+
+###### **Options:**
+
+* `-r`
 
 
 
@@ -294,11 +300,32 @@ Creates, lists, deletes, or moves branches
 
 Switch between branches
 
-**Usage:** `bit switch <BRANCH>`
+**Usage:** `bit switch [OPTIONS] <BRANCH>`
 
 ###### **Arguments:**
 
 * `<BRANCH>`
+
+###### **Options:**
+
+* `-c`, `--create`
+
+
+
+## `bit restore`
+
+Discards either working or staged changes for the given files
+
+**Usage:** `bit restore [OPTIONS] [FILES]...`
+
+###### **Arguments:**
+
+* `<FILES>`
+
+###### **Options:**
+
+* `-W`, `--worktree`
+* `-C`, `--staged`
 
 
 

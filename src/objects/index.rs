@@ -132,6 +132,10 @@ impl Index {
 
         Ok(())
     }
+
+    pub fn sort(&mut self) {
+        self.entries.sort_by(|a, b| a.name.cmp(&b.name));
+    }
 }
 
 #[derive(Clone, Default)]

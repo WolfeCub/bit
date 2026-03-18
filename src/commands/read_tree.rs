@@ -63,7 +63,7 @@ pub fn read_flattened_tree_ignorelist(
             new_entries.insert(path.clone());
         }
     }
-    index.entries.sort_by(|a, b| a.name.cmp(&b.name));
+    index.sort();
 
     if update_working_directory {
         for entry in index.entries.iter_mut() {

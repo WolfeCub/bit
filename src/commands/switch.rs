@@ -24,18 +24,12 @@ pub struct SwitchArg {
 impl SwitchArg {
     pub fn run(self) -> anyhow::Result<()> {
         let head_state = HeadState::read_from_disk()?;
-        let head_hash = match head_state {
-            HeadState::Unborn { .. } => None,
-            HeadState::Attached { hash, .. } | HeadState::Detached { hash, .. } => Some(hash),
-        };
 
         // If we create a new branch it's tree is exactly our tree. So there won't be any conflicts.
         if !self.create {
-            let head_flattened = head_hash
-                .map(|hh| {
-                    let head_commit = Object::<Commit>::read_from_disk(&hh, ObjectType::Commit)?;
-                    flatten_tree_from_disk(&head_commit.inner.tree)
-                })
+            let head_flattened = head_state
+                .read_commit()?
+                .map(|commit| flatten_tree_from_disk(&commit.tree))
                 .transpose()?
                 .unwrap_or_default();
 
