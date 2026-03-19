@@ -3,6 +3,7 @@ pub mod config;
 pub mod path;
 pub mod repo;
 pub mod head;
+pub mod changes;
 
 use std::{fs, path::Path, process::Command};
 

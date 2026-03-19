@@ -2,6 +2,7 @@ use std::{fs, os::unix::fs::MetadataExt};
 
 use clap::Args;
 use colored::Colorize;
+use itertools::Itertools;
 
 use crate::{
     commands::hash_object::hash_object_from_disk,
@@ -12,6 +13,9 @@ use crate::{
     },
     utils::{
         bit_dir_walker::BitDirWalker,
+        changes::{
+            UnstagedChange, UnstagedChangeKind, get_changes_to_be_committed, get_unstaged_changes,
+        },
         head::HeadState,
         path::relative_path_string,
         repo::{cwd, repo_root},
@@ -61,124 +65,26 @@ impl StatusArg {
             }
         }
 
-        let mut files = BitDirWalker::new_with_ignore(&root, &ignore)?
-            .map(|entry| -> anyhow::Result<(String, fs::Metadata)> {
-                let path = entry.path();
-                Ok((
-                    path.strip_prefix(&root)?.to_string_lossy().into(),
-                    entry.metadata()?,
-                ))
-            })
-            .collect::<anyhow::Result<Vec<_>>>()?;
-
-        // Compare the index to the file system to see what's modified or deleted
-        // These are our unstaged changes
-        let mut unstaged_changes = Vec::<String>::with_capacity(index.entries.len());
-        for entry in index.entries.iter() {
-            let relative = relative_path_string(&root.join(&entry.name), cwd()?)?;
-
-            if !root.join(&entry.name).exists() {
-                unstaged_changes.push(
-                    format!("        deleted:    {}", &relative)
-                        .red()
-                        .to_string(),
-                );
-                continue;
-            }
-
-            let Some((_, meta)) = files
-                .iter()
-                .position(|(path, _)| path == &entry.name)
-                .map(|i| files.remove(i))
-            else {
-                continue;
-            };
-
-            if file_changed_heuristic(entry, meta) {
-                let path = root.join(&entry.name);
-                let hash = hash_object_from_disk(path, ObjectType::Blob, false)?;
-
-                if hash != entry.sha {
-                    unstaged_changes.push(
-                        format!("        modified:   {}", &relative)
-                            .red()
-                            .to_string(),
-                    );
-                }
-            }
-        }
+        let (unstaged_changes, untracked_files) = get_unstaged_changes(&index, &ignore)?;
 
         if unstaged_changes.len() > 0 {
             println!(
                 "\nChanges not staged for commit:\n{}",
-                unstaged_changes.join("\n")
+                format_unstaged_changes(&unstaged_changes)?
             );
         }
 
-        if files.len() > 0 {
+        if untracked_files.len() > 0 {
             println!("\nUntracked files:");
         }
         // Anything that's left over in the files list is untracked
-        for (path, _) in files {
+        for path in untracked_files {
             let relative = relative_path_string(&root.join(&path), cwd()?)?;
             println!("        {}", relative.red());
         }
 
         Ok(())
     }
-}
-
-fn file_changed_heuristic(entry: &IndexEntry, meta: fs::Metadata) -> bool {
-    let ctime_equal =
-        meta.ctime() == i64::from(entry.ctime.s) && meta.ctime_nsec() == i64::from(entry.ctime.ns);
-    let mtime_equal =
-        meta.mtime() == i64::from(entry.mtime.s) && meta.mtime_nsec() == i64::from(entry.mtime.ns);
-    let size_equal = meta.size() == entry.size as u64;
-    let ino_equal = meta.ino() == entry.ino as u64;
-    let uid_equal = meta.uid() == entry.uid as u32;
-    let gid_equal = meta.gid() == entry.gid as u32;
-    let mode_equal = meta.mode() == entry.mode as u32;
-
-    !ctime_equal
-        || !mtime_equal
-        || !size_equal
-        || !ino_equal
-        || !uid_equal
-        || !gid_equal
-        || !mode_equal
-}
-
-#[derive(Debug)]
-pub struct StagedChange<'a> {
-    pub new_file: bool,
-    pub entry: &'a IndexEntry,
-}
-
-pub fn get_changes_to_be_committed<'a>(
-    tree_hash: Option<&str>,
-    index: &'a Index,
-) -> anyhow::Result<Vec<StagedChange<'a>>> {
-    let flattened = tree_hash.map(flatten_tree_from_disk).transpose()?;
-
-    Ok(index
-        .entries
-        .iter()
-        .filter_map(|entry| {
-            // If we have a parent hash compute modified vs new files, otherwise just show all
-            // the files in the index as new (can't have modifications without a parent commit)
-            let new_file = if let Some(flattened) = flattened.as_ref() {
-                let new_file = match flattened.get(&entry.name) {
-                    None => true,
-                    Some(tree_entry) if *tree_entry.hash != hex::encode(entry.sha) => false,
-                    _ => return None,
-                };
-                new_file
-            } else {
-                true
-            };
-            Some(StagedChange { new_file, entry })
-        })
-        .collect())
 }
 
 pub fn get_changes_to_be_committed_text(
@@ -189,7 +95,6 @@ pub fn get_changes_to_be_committed_text(
     let cwd = cwd()?;
 
     let changes = get_changes_to_be_committed(tree_hash, index)?;
-
     changes
         .into_iter()
         .map(|change| {
@@ -203,4 +108,24 @@ pub fn get_changes_to_be_committed_text(
             Ok(result)
         })
         .collect()
+}
+
+fn format_unstaged_changes(changes: &[UnstagedChange]) -> anyhow::Result<String> {
+    let root = repo_root()?;
+    let cwd = cwd()?;
+
+    let formatted = changes
+        .into_iter()
+        .map(|change| {
+            let relative = relative_path_string(&root.join(&change.name), &cwd)?;
+            let text = match change.kind {
+                UnstagedChangeKind::Deleted => format!("        deleted:    {}", relative),
+                UnstagedChangeKind::Modified => format!("        modified:   {}", relative),
+            };
+            Ok(text.red().to_string())
+        })
+        .collect::<anyhow::Result<Vec<_>>>()?
+        .join("\n");
+
+    Ok(formatted)
 }

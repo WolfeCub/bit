@@ -19,6 +19,7 @@ use commands::write_tree::WriteTreeArg;
 use crate::commands::add::AddArg;
 use crate::commands::branch::BranchArg;
 use crate::commands::commit::CommitArg;
+use crate::commands::diff::DiffArg;
 use crate::commands::read_tree::ReadTreeArg;
 use crate::commands::remove::RemoveArg;
 use crate::commands::restore::RestoreArg;
@@ -53,6 +54,7 @@ enum Args {
     Branch(BranchArg),
     Switch(SwitchArg),
     Restore(RestoreArg),
+    Diff(DiffArg),
 }
 
 fn main() {
@@ -81,6 +83,7 @@ fn main() {
         Args::Branch(a) => a.run(),
         Args::Switch(a) => a.run(),
         Args::Restore(a) => a.run(),
+        Args::Diff(a) => a.run(),
     };
 
     if let Err(e) = result {
