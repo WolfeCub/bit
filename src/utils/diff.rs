@@ -1,4 +1,7 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{
+    collections::{HashMap, VecDeque},
+    rc::Rc,
+};
 
 #[derive(Debug, Clone)]
 pub enum Edit<'a> {
@@ -12,30 +15,39 @@ pub fn myers_diff<'a>(old: &'a str, new: &'a str) -> Vec<Edit<'a>> {
     let new_lines = new.lines().collect::<Vec<_>>();
 
     let mut memo = HashMap::new();
-    return myers_rec(&old_lines, &new_lines, 0, 0, &mut memo).to_vec();
+    let diff = myers_rec(&old_lines, &new_lines, 0, 0, &mut memo);
+
+    // Explicitly drop the memo to ensure we have the only reference to the edits in the Rc
+    drop(memo);
+    // At this point we should have the only reference to the edits in the Rc
+    Rc::try_unwrap(diff)
+        .map_err(|_| anyhow::anyhow!("Unexpected shared reference in diff result"))
+        .unwrap()
+        .into()
 }
 
+// We use VecDeque here for O(1) prepend. A Vec would be O(n) shifting every element "to the right"
 // TODO: Eventually we should rewrite this non recursively but until then Rc makes the memo clones really cheap.
 fn myers_rec<'a>(
     old: &[&'a str],
     new: &[&'a str],
     old_idx: usize,
     new_idx: usize,
-    memo: &mut HashMap<(usize, usize), Rc<Vec<Edit<'a>>>>,
-) -> Rc<Vec<Edit<'a>>> {
+    memo: &mut HashMap<(usize, usize), Rc<VecDeque<Edit<'a>>>>,
+) -> Rc<VecDeque<Edit<'a>>> {
     if let Some(cached) = memo.get(&(old_idx, new_idx)) {
         return Rc::clone(cached);
     }
 
     let result = match (old.get(old_idx), new.get(new_idx)) {
         // Both exhausted, no edits needed
-        (None, None) => vec![],
+        (None, None) => VecDeque::new(),
         // Old exhausted, insert remaining new lines
         (None, Some(&line)) => {
             let mut rest = myers_rec(old, new, old_idx, new_idx + 1, memo)
                 .as_ref()
                 .clone();
-            rest.insert(0, Edit::Insert(line));
+            rest.push_front(Edit::Insert(line));
             rest
         }
         // New exhausted, delete remaining old lines
@@ -43,7 +55,7 @@ fn myers_rec<'a>(
             let mut rest = myers_rec(old, new, old_idx + 1, new_idx, memo)
                 .as_ref()
                 .clone();
-            rest.insert(0, Edit::Delete(line));
+            rest.push_front(Edit::Delete(line));
             rest
         }
         // Lines match, keep and advance both
@@ -51,7 +63,7 @@ fn myers_rec<'a>(
             let mut rest = myers_rec(old, new, old_idx + 1, new_idx + 1, memo)
                 .as_ref()
                 .clone();
-            rest.insert(0, Edit::Keep(old_line));
+            rest.push_front(Edit::Keep(old_line));
             rest
         }
         // Lines differ, pick whichever of delete/insert leads to fewer edits
@@ -60,11 +72,11 @@ fn myers_rec<'a>(
             let insert = myers_rec(old, new, old_idx, new_idx + 1, memo);
             if delete.len() <= insert.len() {
                 let mut rest = delete.as_ref().clone();
-                rest.insert(0, Edit::Delete(old_line));
+                rest.push_front(Edit::Delete(old_line));
                 rest
             } else {
                 let mut rest = insert.as_ref().clone();
-                rest.insert(0, Edit::Insert(new_line));
+                rest.push_front(Edit::Insert(new_line));
                 rest
             }
         }

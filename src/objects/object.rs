@@ -5,7 +5,7 @@ use std::{
 };
 
 use flate2::bufread::ZlibDecoder;
-use anyhow::anyhow;
+use anyhow::{anyhow, bail};
 
 use crate::utils::repo::object_path;
 
@@ -47,7 +47,7 @@ impl<T: GitObject> Object<T> {
 
         // TODO: Size not needed?
         let Some((rest, _size)) = read_header(type_.into(), contents.as_slice()) else {
-            panic!("fatal: bit cat-file {}: bad file", hash);
+            bail!("bit cat-file {}: mismatched header", hash);
         };
 
         Ok(Object {
