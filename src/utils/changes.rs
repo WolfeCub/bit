@@ -3,7 +3,7 @@ use std::{fs, os::unix::fs::MetadataExt};
 use crate::{
     commands::hash_object::hash_object_from_disk,
     objects::{Ignore, Index, IndexEntry, ObjectType, flatten_tree_from_disk},
-    utils::{bit_dir_walker::BitDirWalker, path::relative_path_string, repo::repo_root},
+    utils::{bit_dir_walker::BitDirWalker, repo::repo_root},
 };
 
 #[derive(Debug)]
@@ -39,7 +39,7 @@ pub fn get_changes_to_be_committed<'a>(
         .collect())
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum UnstagedChangeKind {
     Modified,
     Deleted,
@@ -49,6 +49,7 @@ pub enum UnstagedChangeKind {
 pub struct UnstagedChange {
     pub kind: UnstagedChangeKind,
     pub name: String,
+    pub head_hash: String,
 }
 
 pub fn get_unstaged_changes(
@@ -75,6 +76,7 @@ pub fn get_unstaged_changes(
             unstaged_changes.push(UnstagedChange {
                 kind: UnstagedChangeKind::Deleted,
                 name: entry.name.clone(),
+                head_hash: hex::encode(entry.sha),
             });
             continue;
         }
@@ -95,6 +97,7 @@ pub fn get_unstaged_changes(
                 unstaged_changes.push(UnstagedChange {
                     kind: UnstagedChangeKind::Modified,
                     name: entry.name.clone(),
+                    head_hash: hex::encode(entry.sha),
                 });
             }
         }

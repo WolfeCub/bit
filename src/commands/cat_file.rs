@@ -13,9 +13,9 @@ pub struct CatFileArg {
 
 impl CatFileArg {
     pub fn run(self) -> anyhow::Result<()> {
-        let object = Object::<Vec<u8>>::read_from_disk(&self.object, self.type_)?;
+        let object = Object::<String>::read_from_disk(&self.object, self.type_)?;
 
-        println!("{}", unsafe { str::from_utf8_unchecked(&object.inner) });
+        println!("{}", object.inner);
 
         Ok(())
     }

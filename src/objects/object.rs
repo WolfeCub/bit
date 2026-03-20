@@ -135,3 +135,13 @@ impl GitObject for Vec<u8> {
         Ok(body.to_vec())
     }
 }
+
+impl GitObject for String {
+    fn serialize_body(&self) -> Vec<u8> {
+        self.as_bytes().to_vec()
+    }
+
+    fn parse_body(body: &[u8]) -> anyhow::Result<Self> {
+        Ok(String::from_utf8_lossy(body).into_owned())
+    }
+}

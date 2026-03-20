@@ -1,18 +1,13 @@
-use std::{fs, os::unix::fs::MetadataExt};
 
 use clap::Args;
 use colored::Colorize;
-use itertools::Itertools;
 
 use crate::{
-    commands::hash_object::hash_object_from_disk,
     objects::{
-        Commit, Ignore, Index, IndexEntry, Object,
+        Commit, Ignore, Index, Object,
         ObjectType::{self},
-        flatten_tree_from_disk,
     },
     utils::{
-        bit_dir_walker::BitDirWalker,
         changes::{
             UnstagedChange, UnstagedChangeKind, get_changes_to_be_committed, get_unstaged_changes,
         },
