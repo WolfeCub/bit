@@ -74,3 +74,63 @@ fn myers_rec<'a>(
     memo.insert((old_idx, new_idx), Rc::clone(&result));
     result
 }
+
+#[derive(Debug)]
+pub struct Hunk<'a> {
+    pub old_start: usize,
+    pub new_start: usize,
+    pub old_count: usize,
+    pub new_count: usize,
+    pub edits: Vec<&'a Edit<'a>>,
+}
+
+pub fn compute_hunks<'a>(edits: &'a [Edit<'a>]) -> Vec<Hunk<'a>> {
+    let mut hunks = Vec::new();
+    let mut old_line = 1;
+    let mut new_line = 1;
+    let mut current: Option<Hunk<'a>> = None;
+
+    for (i, edit) in edits.iter().enumerate() {
+        let start = (i as isize - 3).max(0) as usize;
+        let end = (i + 3).min(edits.len() - 1);
+        let near_change = edits[start..=end]
+            .iter()
+            .any(|e| !matches!(e, Edit::Keep(_)));
+
+        if near_change {
+            let hunk = current.get_or_insert(Hunk {
+                old_start: old_line,
+                new_start: new_line,
+                old_count: 0,
+                new_count: 0,
+                edits: Vec::new(),
+            });
+            hunk.edits.push(edit);
+            match edit {
+                Edit::Keep(_) => {
+                    hunk.old_count += 1;
+                    hunk.new_count += 1;
+                }
+                Edit::Delete(_) => hunk.old_count += 1,
+                Edit::Insert(_) => hunk.new_count += 1,
+            }
+        } else if let Some(hunk) = current.take() {
+            hunks.push(hunk);
+        }
+
+        match edit {
+            Edit::Keep(_) => {
+                old_line += 1;
+                new_line += 1;
+            }
+            Edit::Delete(_) => old_line += 1,
+            Edit::Insert(_) => new_line += 1,
+        }
+    }
+
+    if let Some(hunk) = current {
+        hunks.push(hunk);
+    }
+
+    hunks
+}
