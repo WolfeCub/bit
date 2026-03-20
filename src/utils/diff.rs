@@ -2,7 +2,6 @@ use std::{
     collections::{HashMap, VecDeque},
     rc::Rc,
 };
-
 #[derive(Debug, Clone)]
 pub enum Edit<'a> {
     Keep(&'a str),
@@ -42,22 +41,19 @@ fn myers_rec<'a>(
     let result = match (old.get(old_idx), new.get(new_idx)) {
         // Both exhausted, no edits needed
         (None, None) => VecDeque::new(),
+
         // Old exhausted, insert remaining new lines
-        (None, Some(&line)) => {
-            let mut rest = myers_rec(old, new, old_idx, new_idx + 1, memo)
-                .as_ref()
-                .clone();
-            rest.push_front(Edit::Insert(line));
-            rest
-        }
+        (None, Some(_)) => new[new_idx..]
+            .iter()
+            .map(|l| Edit::Insert(*l))
+            .collect::<VecDeque<_>>(),
+
         // New exhausted, delete remaining old lines
-        (Some(&line), None) => {
-            let mut rest = myers_rec(old, new, old_idx + 1, new_idx, memo)
-                .as_ref()
-                .clone();
-            rest.push_front(Edit::Delete(line));
-            rest
-        }
+        (Some(_), None) => old[old_idx..]
+            .iter()
+            .map(|l| Edit::Delete(*l))
+            .collect::<VecDeque<_>>(),
+
         // Lines match, keep and advance both
         (Some(&old_line), Some(&new_line)) if old_line == new_line => {
             let mut rest = myers_rec(old, new, old_idx + 1, new_idx + 1, memo)
@@ -66,6 +62,7 @@ fn myers_rec<'a>(
             rest.push_front(Edit::Keep(old_line));
             rest
         }
+
         // Lines differ, pick whichever of delete/insert leads to fewer edits
         (Some(&old_line), Some(&new_line)) => {
             let delete = myers_rec(old, new, old_idx + 1, new_idx, memo);
