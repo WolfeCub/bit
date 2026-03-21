@@ -1,12 +1,12 @@
 pub mod bit_dir_walker;
+pub mod changes;
 pub mod config;
+pub mod diff;
+pub mod head;
 pub mod path;
 pub mod repo;
-pub mod head;
-pub mod changes;
-pub mod diff;
 
-use std::{fs, path::Path, process::Command};
+use std::{fs, io::Write, path::Path, process::{Command, Stdio}};
 
 use anyhow::anyhow;
 use chrono::{DateTime, Local};
@@ -57,4 +57,20 @@ where
     } else {
         Ok(filtered.join("\n"))
     }
+}
+
+// TODO: Support custom pagers
+pub fn pager(content: &str) -> anyhow::Result<()> {
+    let mut child = Command::new("less")
+        .arg("-FRX")
+        .stdin(Stdio::piped())
+        .spawn()?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(content.as_bytes())?;
+    }
+
+    child.wait()?;
+
+    Ok(())
 }

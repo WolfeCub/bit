@@ -6,6 +6,7 @@ use itertools::Itertools;
 
 use crate::objects::Commit;
 use crate::utils::bit_dir_walker::BitDirWalker;
+use crate::utils::pager;
 use crate::utils::repo::repo_root;
 use crate::{
     commands::show_ref::resolve_ref,
@@ -25,27 +26,35 @@ impl LogArg {
         };
 
         let map = build_hash_to_ref_map()?;
-        for item in CommitIter::new(log_commit.clone()) {
-            let (hash, commit) = item?;
-            let (author, date) = commit.parse_author_date();
+        let output = CommitIter::new(log_commit.clone())
+            .map(|item| -> anyhow::Result<String> {
+                let (hash, commit) = item?;
+                let (author, date) = commit.parse_author_date();
 
-            let hash_names = if let Some(names) = map.get(&hash) {
-                let joined = names
-                    .iter()
-                    .map(|f| format_ref(f, hash == log_commit))
-                    .join(", ".yellow().as_ref());
+                let hash_names = if let Some(names) = map.get(&hash) {
+                    let joined = names
+                        .iter()
+                        .map(|f| format_ref(f, hash == log_commit))
+                        .join(", ".yellow().as_ref());
 
-                format!("{}{}{}", " (".yellow(), joined, ")".yellow())
-            } else {
-                String::new()
-            };
+                    format!("{}{}{}", " (".yellow(), joined, ")".yellow())
+                } else {
+                    String::new()
+                };
 
-            println!("{} {}{}", "commit".yellow(), hash.yellow(), hash_names);
-            println!("Author: {}", author);
-            println!("Date:   {}", date.format("%a %h %d %H:%M:%S %Y %z"));
-            println!();
-            println!("    {}", commit.message);
-        }
+                Ok(format!(
+                    "{} {}{}\nAuthor: {}\nDate:   {}\n\n    {}",
+                    "commit".yellow(),
+                    hash.yellow(),
+                    hash_names,
+                    author,
+                    date.format("%a %h %d %H:%M:%S %Y %z"),
+                    commit.message
+                ))
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
+
+        pager(&output.join("\n"))?;
 
         Ok(())
     }

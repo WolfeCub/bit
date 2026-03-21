@@ -9,6 +9,7 @@ use crate::{
     utils::{
         changes::{UnstagedChangeKind, get_unstaged_changes},
         diff::{Edit, compute_hunks, myers_diff},
+        pager,
         repo::repo_root,
     },
 };
@@ -26,6 +27,8 @@ impl DiffArg {
         let ignore = Ignore::build_from_disk()?;
 
         let (unstaged_changes, _) = get_unstaged_changes(&index, &ignore)?;
+
+        let mut output = vec![];
         for change in unstaged_changes {
             if change.kind != UnstagedChangeKind::Modified {
                 continue;
@@ -39,41 +42,49 @@ impl DiffArg {
             let result = myers_diff(&old_content.inner, &new_content);
             let hunks = compute_hunks(&result);
 
-            println!(
-                "{}\n{}\n{}\n{}",
-                format!("diff --git a/{0} b/{0}", &change.name).bold(),
+            output.push(
+                format!("diff --git a/{0} b/{0}", &change.name)
+                    .bold()
+                    .to_string(),
+            );
+            output.push(
                 format!(
                     "index {}..{} {}",
                     &change.head_hash[..7],
                     &hex::encode(new_hash)[..7],
                     "TODO MODE"
                 )
-                .bold(),
-                format!("--- a/{}", &change.name).bold(),
-                format!("+++ b/{}", &change.name).bold(),
+                .bold()
+                .to_string(),
             );
+            output.push(format!("--- a/{}", &change.name).bold().to_string());
+            output.push(format!("+++ b/{}", &change.name).bold().to_string());
 
             for hunk in hunks {
-                println!(
-                    "{}",
+                output.push(
                     format!(
                         "@@ -{},{} +{},{} @@",
                         hunk.old_start, hunk.old_count, hunk.new_start, hunk.new_count,
                     )
                     .cyan()
+                    .to_string(),
                 );
 
                 for edit in hunk.edits {
-                    match edit {
-                        Edit::Insert(line) => println!("{}", format!("+ {line}").green()),
-                        Edit::Delete(line) => println!("{}", format!("- {line}").red()),
-                        Edit::Keep(line) => println!("  {line}"),
-                    }
+                    let formatted = match edit {
+                        Edit::Insert(line) => format!("+ {line}").green().to_string(),
+                        Edit::Delete(line) => format!("- {line}").red().to_string(),
+                        Edit::Keep(line) => format!("  {line}"),
+                    };
+
+                    output.push(formatted);
                 }
             }
 
-            println!();
+            output.push(String::new());
         }
+
+        pager(output.join("\n").as_str())?;
 
         Ok(())
     }
