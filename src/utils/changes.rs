@@ -8,8 +8,14 @@ use crate::{
 
 #[derive(Debug)]
 pub struct StagedChange<'a> {
-    pub new_file: bool,
     pub entry: &'a IndexEntry,
+    pub head_hash: Option<String>,
+}
+
+impl StagedChange<'_> {
+    pub fn new_file(&self) -> bool {
+        self.head_hash.is_none()
+    }
 }
 
 pub fn get_changes_to_be_committed<'a>(
@@ -24,17 +30,18 @@ pub fn get_changes_to_be_committed<'a>(
         .filter_map(|entry| {
             // If we have a parent hash compute modified vs new files, otherwise just show all
             // the files in the index as new (can't have modifications without a parent commit)
-            let new_file = if let Some(flattened) = flattened.as_ref() {
-                let new_file = match flattened.get(&entry.name) {
-                    None => true,
-                    Some(tree_entry) if *tree_entry.hash != hex::encode(entry.sha) => false,
-                    _ => return None,
-                };
-                new_file
+            let head_hash = if let Some(flattened) = flattened.as_ref() {
+                match flattened.get(&entry.name) {
+                    Some(tree_entry) if *tree_entry.hash != hex::encode(entry.sha) => {
+                        Some(tree_entry.hash.clone())
+                    }
+                    None => None,     // New file
+                    _ => return None, // Unchanged file
+                }
             } else {
-                true
+                None // No parent, so all files are new
             };
-            Some(StagedChange { new_file, entry })
+            Some(StagedChange { entry, head_hash })
         })
         .collect())
 }

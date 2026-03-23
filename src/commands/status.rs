@@ -95,7 +95,7 @@ pub fn get_changes_to_be_committed_text(
         .map(|change| {
             let relative = relative_path_string(&root.join(&change.entry.name), &cwd)?;
 
-            let result = if change.new_file {
+            let result = if change.new_file() {
                 format!("        new file:   {}", &relative)
             } else {
                 format!("        modified:   {}", &relative)
