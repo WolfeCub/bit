@@ -137,7 +137,14 @@ pub fn compute_hunks<'a>(edits: &'a [Edit<'a>]) -> Vec<Hunk<'a>> {
         }
     }
 
-    if let Some(hunk) = current {
+    if let Some(mut hunk) = current {
+        // git sets start to 0 when count is 0
+        if hunk.new_count == 0 {
+            hunk.new_start = 0;
+        }
+        if hunk.old_count == 0 {
+            hunk.old_start = 0;
+        }
         hunks.push(hunk);
     }
 

@@ -1,4 +1,4 @@
-use std::{fs, os::unix::fs::MetadataExt};
+use std::{collections::HashMap, fs, os::unix::fs::MetadataExt};
 
 use crate::{
     commands::hash_object::hash_object_from_disk,
@@ -7,14 +7,41 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct StagedChange<'a> {
-    pub entry: &'a IndexEntry,
-    pub head_hash: Option<String>,
+pub enum StagedChange<'a> {
+    Added(&'a IndexEntry),
+    Modified {
+        entry: &'a IndexEntry,
+        head_hash: String,
+    },
+    Deleted {
+        name: String,
+        head_hash: String,
+    },
 }
 
 impl StagedChange<'_> {
-    pub fn new_file(&self) -> bool {
-        self.head_hash.is_none()
+    pub fn name(&self) -> &str {
+        match self {
+            StagedChange::Added(entry) => &entry.name,
+            StagedChange::Modified { entry, .. } => &entry.name,
+            StagedChange::Deleted { name, .. } => name,
+        }
+    }
+
+    pub fn head_hash(&self) -> Option<&str> {
+        match self {
+            StagedChange::Added(_) => None,
+            StagedChange::Modified { head_hash, .. } => Some(head_hash),
+            StagedChange::Deleted { head_hash, .. } => Some(head_hash),
+        }
+    }
+
+    pub fn entry(&self) -> Option<&IndexEntry> {
+        match self {
+            StagedChange::Added(entry) => Some(entry),
+            StagedChange::Modified { entry, .. } => Some(entry),
+            StagedChange::Deleted { .. } => None,
+        }
     }
 }
 
@@ -22,26 +49,46 @@ pub fn get_changes_to_be_committed<'a>(
     tree_hash: Option<&str>,
     index: &'a Index,
 ) -> anyhow::Result<Vec<StagedChange<'a>>> {
-    let flattened = tree_hash.map(flatten_tree_from_disk).transpose()?;
+    // If we don't have a parent tree hash then we consider everything in the index as new
+    let Some(flattened) = tree_hash.map(flatten_tree_from_disk).transpose()? else {
+        return Ok(index.entries.iter().map(StagedChange::Added).collect());
+    };
 
-    Ok(index
+    let index_map = index
         .entries
         .iter()
-        .filter_map(|entry| {
-            // If we have a parent hash compute modified vs new files, otherwise just show all
-            // the files in the index as new (can't have modifications without a parent commit)
-            let head_hash = if let Some(flattened) = flattened.as_ref() {
-                match flattened.get(&entry.name) {
-                    Some(tree_entry) if *tree_entry.hash != hex::encode(entry.sha) => {
-                        Some(tree_entry.hash.clone())
-                    }
-                    None => None,     // New file
-                    _ => return None, // Unchanged file
-                }
-            } else {
-                None // No parent, so all files are new
-            };
-            Some(StagedChange { entry, head_hash })
+        .map(|entry| (entry.name.clone(), entry))
+        .collect::<HashMap<_, _>>();
+
+    let all_names = index
+        .entries
+        .iter()
+        .map(|e| &e.name)
+        .chain(flattened.keys())
+        .collect::<Vec<_>>();
+
+    Ok(all_names
+        .into_iter()
+        .filter_map(|name| match (index_map.get(name), flattened.get(name)) {
+            // In index but not in HEAD — newly staged file
+            (Some(entry), None) => Some(StagedChange::Added(entry)),
+
+            // In both, but hashes differ — file was modified and staged
+            (Some(entry), Some(tree_entry)) if *tree_entry.hash != hex::encode(entry.sha) => {
+                Some(StagedChange::Modified {
+                    entry,
+                    head_hash: tree_entry.hash.clone(),
+                })
+            }
+
+            // In HEAD but not in index — file was staged for deletion
+            (None, Some(tree_entry)) => Some(StagedChange::Deleted {
+                name: name.clone(),
+                head_hash: tree_entry.hash.clone(),
+            }),
+
+            // In both with matching hashes — unchanged, or (None, None) which is unreachable
+            _ => None,
         })
         .collect())
 }

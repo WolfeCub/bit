@@ -1,4 +1,3 @@
-
 use clap::Args;
 use colored::Colorize;
 
@@ -9,7 +8,8 @@ use crate::{
     },
     utils::{
         changes::{
-            UnstagedChange, UnstagedChangeKind, get_changes_to_be_committed, get_unstaged_changes,
+            StagedChange, UnstagedChange, UnstagedChangeKind, get_changes_to_be_committed,
+            get_unstaged_changes,
         },
         head::HeadState,
         path::relative_path_string,
@@ -93,13 +93,14 @@ pub fn get_changes_to_be_committed_text(
     changes
         .into_iter()
         .map(|change| {
-            let relative = relative_path_string(&root.join(&change.entry.name), &cwd)?;
+            let relative = relative_path_string(&root.join(&change.name()), &cwd)?;
 
-            let result = if change.new_file() {
-                format!("        new file:   {}", &relative)
-            } else {
-                format!("        modified:   {}", &relative)
+            let result = match change {
+                StagedChange::Added(_) => format!("        new file:   {}", &relative),
+                StagedChange::Modified { .. } => format!("        modified:   {}", &relative),
+                StagedChange::Deleted { .. } => format!("        deleted:    {}", &relative),
             };
+
             Ok(result)
         })
         .collect()

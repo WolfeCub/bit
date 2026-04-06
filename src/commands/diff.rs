@@ -7,7 +7,7 @@ use crate::{
     commands::hash_object::hash_object,
     objects::{Ignore, Index, Object, ObjectType},
     utils::{
-        changes::{get_changes_to_be_committed, get_unstaged_changes},
+        changes::{UnstagedChangeKind, get_changes_to_be_committed, get_unstaged_changes},
         diff::{Edit, compute_hunks, myers_diff},
         head::HeadState,
         pager,
@@ -28,7 +28,7 @@ pub struct DiffArg {
 struct DiffChange {
     name: String,
     head_hash: Option<String>,
-    new_hash: String,
+    new_hash: Option<String>,
     new_content: String,
 }
 
@@ -50,41 +50,10 @@ impl DiffArg {
         // i.e. we've added the change so it's in the index and how it differs from the last commit.
         // Otherwise we want to compare the head commit to the working directory
         // i.e. the content of the file hasn't made it to the index yet so just read it's contents.
-        let changes: Vec<DiffChange> = if self.cached {
-            let head_commit = HeadState::read_from_disk()?.read_commit()?;
-
-            get_changes_to_be_committed(head_commit.map(|hc| hc.tree).as_deref(), &index)?
-                .into_iter()
-                .filter(|c| file_filters.contains(&c.entry.name) || file_filters.len() == 0)
-                .map(|c| -> anyhow::Result<DiffChange> {
-                    let hash = hex::encode(c.entry.sha);
-                    let obj = Object::<String>::read_from_disk(&hash, ObjectType::Blob)?;
-
-                    Ok(DiffChange {
-                        name: c.entry.name.clone(),
-                        head_hash: c.head_hash,
-                        new_hash: hash,
-                        new_content: obj.inner,
-                    })
-                })
-                .collect::<anyhow::Result<_>>()?
+        let changes = if self.cached {
+            staged_changes(&index, &file_filters)?
         } else {
-            get_unstaged_changes(&index, &ignore)?
-                .0
-                .into_iter()
-                .filter(|c| file_filters.contains(&c.name) || file_filters.len() == 0)
-                .map(|c| -> anyhow::Result<DiffChange> {
-                    let content = fs::read_to_string(root.join(&c.name))?;
-                    let hash = hex::encode(hash_object(ObjectType::Blob, content.clone(), false)?);
-
-                    Ok(DiffChange {
-                        name: c.name,
-                        head_hash: Some(c.head_hash),
-                        new_hash: hash,
-                        new_content: content,
-                    })
-                })
-                .collect::<anyhow::Result<_>>()?
+            unstaged_changes(root, index, ignore, file_filters)?
         };
 
         let mut output = vec![];
@@ -97,7 +66,7 @@ impl DiffArg {
             output.extend(render_file_diff(
                 &change.name,
                 change.head_hash.as_deref(),
-                &change.new_hash,
+                change.new_hash.as_deref(),
                 &old_content,
                 &change.new_content,
             )?);
@@ -109,10 +78,70 @@ impl DiffArg {
     }
 }
 
+fn staged_changes(
+    index: &Index,
+    file_filters: &HashSet<String>,
+) -> Result<Vec<DiffChange>, anyhow::Error> {
+    let head_commit = HeadState::read_from_disk()?.read_commit()?;
+    Ok(
+        get_changes_to_be_committed(head_commit.map(|hc| hc.tree).as_deref(), index)?
+            .into_iter()
+            .filter(|c| file_filters.contains(c.name()) || file_filters.len() == 0)
+            .map(|c| -> anyhow::Result<DiffChange> {
+                let (new_hash, new_content) = match c.entry() {
+                    Some(e) => {
+                        let hash = hex::encode(e.sha);
+                        let obj = Object::<String>::read_from_disk(&hash, ObjectType::Blob)?;
+                        (Some(hash), obj.inner)
+                    }
+                    None => (None, String::new()),
+                };
+
+                Ok(DiffChange {
+                    name: c.name().to_string(),
+                    head_hash: c.head_hash().map(str::to_string),
+                    new_hash,
+                    new_content,
+                })
+            })
+            .collect::<anyhow::Result<_>>()?,
+    )
+}
+
+fn unstaged_changes(
+    root: std::path::PathBuf,
+    index: Index,
+    ignore: Ignore,
+    file_filters: HashSet<String>,
+) -> Result<Vec<DiffChange>, anyhow::Error> {
+    Ok(get_unstaged_changes(&index, &ignore)?
+        .0
+        .into_iter()
+        .filter(|c| file_filters.contains(&c.name) || file_filters.len() == 0)
+        .map(|c| -> anyhow::Result<DiffChange> {
+            let (new_hash, new_content) = match c.kind {
+                UnstagedChangeKind::Deleted => (None, String::new()),
+                UnstagedChangeKind::Modified => {
+                    let content = fs::read_to_string(root.join(&c.name))?;
+                    let hash = hex::encode(hash_object(ObjectType::Blob, content.clone(), false)?);
+                    (Some(hash), content)
+                }
+            };
+
+            Ok(DiffChange {
+                name: c.name,
+                head_hash: Some(c.head_hash),
+                new_hash,
+                new_content,
+            })
+        })
+        .collect::<anyhow::Result<_>>()?)
+}
+
 fn render_file_diff(
     name: &str,
     old_hash: Option<&str>,
-    new_hash: &str,
+    new_hash: Option<&str>,
     old_content: &str,
     new_content: &str,
 ) -> anyhow::Result<Vec<String>> {
@@ -123,14 +152,22 @@ fn render_file_diff(
     output.push(
         format!(
             "index {}..{} TODO MODE",
-            old_hash.map(|h| &h[..7]).unwrap_or_else(|| "/dev/null"),
-            &new_hash[..7]
+            old_hash.map(|h| &h[..7]).unwrap_or("0000000"),
+            new_hash.map(|h| &h[..7]).unwrap_or("0000000"),
         )
         .bold()
         .to_string(),
     );
-    output.push(format!("--- a/{}", name).bold().to_string());
-    output.push(format!("+++ b/{}", name).bold().to_string());
+
+    let old_name = old_hash
+        .map(|_| format!("a/{}", name))
+        .unwrap_or_else(|| "/dev/null".to_string());
+    let new_name = new_hash
+        .map(|_| format!("b/{}", name))
+        .unwrap_or_else(|| "/dev/null".to_string());
+    output.push(format!("--- {}", old_name).bold().to_string());
+    output.push(format!("+++ {}", new_name).bold().to_string());
+
     for hunk in hunks {
         output.push(
             format!(
@@ -142,9 +179,9 @@ fn render_file_diff(
         );
         for edit in hunk.edits {
             output.push(match edit {
-                Edit::Insert(line) => format!("+ {line}").green().to_string(),
-                Edit::Delete(line) => format!("- {line}").red().to_string(),
-                Edit::Keep(line) => format!("  {line}"),
+                Edit::Insert(line) => format!("+{line}").green().to_string(),
+                Edit::Delete(line) => format!("-{line}").red().to_string(),
+                Edit::Keep(line) => format!(" {line}"),
             });
         }
     }
